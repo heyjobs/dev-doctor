@@ -7,11 +7,11 @@ import (
 
 // ConnectToVPN provides instructions for connecting to VPN
 func ConnectToVPN(ctx context.Context) error {
-	fmt.Println("  To connect to VPN:")
-	fmt.Println("  1. Open your VPN client application")
-	fmt.Println("  2. Connect to the company VPN")
-	fmt.Println("  3. Wait for connection to establish")
+	fmt.Println("  ⚠ Check here to connect to VPN:")
+	fmt.Println("  https://heyjobs.atlassian.net/wiki/spaces/dnp/pages/2722070581/How+to+set+up+HeyJobs+VPN")
 	fmt.Println()
-	fmt.Println("  ⚠ Cannot auto-connect - please connect manually")
+	fmt.Println("  VPN is needed for:")
+	fmt.Println("  - Connecting to Redshift via IDE (using Wasp)")
+	fmt.Println("  - Connecting to Airflow instances")
 	return nil
 }
