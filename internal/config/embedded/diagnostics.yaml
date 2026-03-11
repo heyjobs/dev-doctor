@@ -1,0 +1,128 @@
+tests:
+  - test: check_homebrew_installed
+    description: Verify Homebrew is installed
+    diagnostic: homebrew_installed
+    cure: install_homebrew
+    severity: critical
+    symptom: Cannot install packages via Homebrew
+    profiles:
+      - basic
+
+  - test: check_homebrew_updated
+    description: Verify Homebrew is up to date
+    diagnostic: homebrew_updated
+    cure: update_homebrew
+    severity: warning
+    symptom: Homebrew formulae may be outdated
+    profiles:
+      - basic
+
+  - test: check_vpn_connection
+    description: Verify connected to VPN
+    diagnostic: vpn_connection
+    cure: connect_to_vpn
+    severity: info
+    symptom: Cannot access internal resources without VPN
+    profiles:
+      - basic
+
+  - test: check_aws_vault
+    description: Verify aws-vault is installed
+    diagnostic: aws_vault
+    cure: install_aws_vault
+    severity: warning
+    symptom: Cannot securely manage AWS credentials
+    profiles:
+      - basic
+
+  - test: check_aws_sso_setup
+    description: Verify AWS SSO profiles are configured
+    diagnostic: aws_sso_setup
+    cure: setup_aws_sso
+    severity: warning
+    symptom: AWS SSO authentication fails or profiles are missing
+    profiles:
+      - basic
+
+
+  # - test: check_git_configuration
+  #   description: Verify Git user configuration is set
+  #   diagnostic: git_config
+  #   cure: configure_git
+  #   severity: info
+  #   symptom: Git commits require manual user configuration
+  #   profiles:
+  #     - basic
+
+  # - test: check_brewfile
+  #   description: Verify infrastructure tools from Brewfile are installed
+  #   diagnostic: brewfile
+  #   cure: install_brewfile
+  #   severity: warning
+  #   symptom: Infrastructure tools are missing
+  #   profiles:
+  #     - infrastructure
+
+  - test: check_docker_installed
+    description: Verify Docker is installed
+    diagnostic: docker_installed
+    cure: install_docker
+    severity: critical
+    symptom: Cannot run Docker containers
+    profiles:
+      - infrastructure
+
+  - test: check_docker_running
+    description: Verify Docker daemon is running
+    diagnostic: docker_running
+    cure: start_docker
+    severity: info
+    symptom: Docker commands fail because daemon is not running
+    profiles:
+      - infrastructure
+
+  - test: check_docker_compose
+    description: Verify docker-compose is installed
+    diagnostic: docker_compose
+    cure: install_docker_compose
+    severity: critical
+    symptom: Cannot run multi-container Docker applications
+    profiles:
+      - infrastructure
+
+  - test: check_opentofu_version
+    description: Verify OpenTofu version meets requirements
+    diagnostic: opentofu_version
+    cure: update_opentofu
+    severity: warning
+    symptom: OpenTofu commands fail or produce unexpected results
+    profiles:
+      - infrastructure
+
+  - test: check_python_version
+    description: Verify Python version is 3.10.x
+    diagnostic: python_version
+    cure: update_python
+    severity: warning
+    symptom: Python scripts may fail or use incompatible features
+    profiles:
+      - data
+
+  - test: check_wasp_version
+    description: Verify Wasp is installed
+    diagnostic: wasp_version
+    cure: install_wasp
+    severity: warning
+    symptom: Wasp is used to connect to Redshift 
+    profiles:
+      - data
+
+  - test: check_claude
+    description: Verify Claude CLI is installed
+    diagnostic: claude_cli
+    cure: install_claude_cli
+    severity: warning
+    symptom: Cannot use Claude CLI commands
+    profiles:
+      - basic
+

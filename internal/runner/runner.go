@@ -240,6 +240,11 @@ func (r *Runner) RunWithClaudeAssist(ctx context.Context, diagnosticCallback Res
 			continue
 		}
 
+		// Skip INFO issues - they are informational only, no treatment needed
+		if result.Status == types.StatusInfo {
+			continue
+		}
+
 		// Skip if no cure available
 		if !result.FixAvailable || result.CureID == "" {
 			continue
