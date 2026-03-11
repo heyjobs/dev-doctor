@@ -68,28 +68,20 @@ func InstallDbtRedshift(ctx context.Context) error {
 	return nil
 }
 
-// SetupDbtSecretConfig copies secret_config.env.template to secret_config.env if missing.
+// SetupDbtSecretConfig prints instructions to load dbt environment variables.
+// Sourcing a file into the parent shell cannot be done from a subprocess,
+// so the cure tells the user exactly what to run.
 func SetupDbtSecretConfig(ctx context.Context) error {
-	if _, err := os.Stat("secret_config.env"); err == nil {
-		fmt.Println("  secret_config.env already exists")
-		fmt.Println("  ℹ Edit it to fill in DBT_REDSHIFT_USER and DBT_REDSHIFT_PASSWORD")
-		return nil
-	}
-
-	fmt.Println("  Copying secret_config.env.template → secret_config.env...")
-	data, err := os.ReadFile("secret_config.env.template")
-	if err != nil {
-		return fmt.Errorf("template not found at secret_config.env.template: %w", err)
-	}
-	if err := os.WriteFile("secret_config.env", data, 0600); err != nil {
-		return fmt.Errorf("failed to write secret_config.env: %w", err)
-	}
-
-	fmt.Println("  ✓ secret_config.env created")
+	fmt.Println("  dbt environment variables are not set in this shell session.")
+	fmt.Println("  They are loaded by sourcing secret_config.env, which is done by start_env.sh.")
 	fmt.Println()
-	fmt.Println("  ℹ Open it and set:")
-	fmt.Println("      DBT_REDSHIFT_USER=<your user>")
-	fmt.Println("      DBT_REDSHIFT_PASSWORD=<your password>")
+	fmt.Println("  Run the following from the bi_analytics_dbt repo root:")
+	fmt.Println()
+	fmt.Println("      source secret_config.env")
+	fmt.Println()
+	fmt.Println("  Or run the full environment setup:")
+	fmt.Println()
+	fmt.Println("      source venv/bin/activate && source secret_config.env")
 
 	return nil
 }

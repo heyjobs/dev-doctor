@@ -1,7 +1,6 @@
 package diagnostics
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"os"
@@ -62,55 +61,27 @@ func CheckDbtVenv(ctx context.Context) (types.Status, string, error) {
 	return types.StatusHealthy, "Python venv exists and is ready to activate", nil
 }
 
-// CheckDbtSecretConfig verifies secret_config.env exists, credentials are configured,
-// and the active credentials point to Staging (not Production).
+// CheckDbtSecretConfig verifies the dbt environment variables are set and point to Staging.
+// Variables are expected to be loaded by running: source secret_config.env
 func CheckDbtSecretConfig(ctx context.Context) (types.Status, string, error) {
-	configPath := filepath.Join(dbtProjectDir(), "secret_config.env")
+	requiredVars := []string{"DBT_HOST", "DBT_REDSHIFT_USER", "DBT_REDSHIFT_PASSWORD", "DBT_PROFILES_DIR"}
 
-	f, err := os.Open(configPath)
-	if os.IsNotExist(err) {
-		return types.StatusCritical, "secret_config.env not found - copy from secret_config.env.template and fill in credentials", nil
-	}
-	if err != nil {
-		return types.StatusCritical, fmt.Sprintf("Cannot read secret_config.env: %v", err), nil
-	}
-	defer f.Close()
-
-	var unconfigured []string
-	var activeHost string
-
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if strings.HasPrefix(line, "#") || line == "" {
-			continue
-		}
-
-		parts := strings.SplitN(line, "=", 2)
-		if len(parts) != 2 {
-			continue
-		}
-		varName := strings.TrimPrefix(parts[0], "export ")
-		value := parts[1]
-
-		if strings.Contains(value, "<TO BE SET>") {
-			unconfigured = append(unconfigured, varName)
-		}
-
-		if varName == "DBT_HOST" {
-			activeHost = value
+	var missing []string
+	for _, v := range requiredVars {
+		if os.Getenv(v) == "" {
+			missing = append(missing, v)
 		}
 	}
 
-	if len(unconfigured) > 0 {
-		return types.StatusCritical, fmt.Sprintf("Credentials not configured in secret_config.env: %s", strings.Join(unconfigured, ", ")), nil
+	if len(missing) > 0 {
+		return types.StatusCritical, fmt.Sprintf("dbt env vars not set (%s) - run: source secret_config.env", strings.Join(missing, ", ")), nil
 	}
 
-	if activeHost == dbtProdHost {
-		return types.StatusWarning, fmt.Sprintf("secret_config.env is pointing to Production (%s) - switch to Staging credentials (%s)", dbtProdHost, dbtStagingHost), nil
+	if os.Getenv("DBT_HOST") == dbtProdHost {
+		return types.StatusWarning, fmt.Sprintf("dbt credentials point to Production (%s) - switch to Staging (%s)", dbtProdHost, dbtStagingHost), nil
 	}
 
-	return types.StatusHealthy, fmt.Sprintf("secret_config.env configured with Staging credentials (%s)", activeHost), nil
+	return types.StatusHealthy, fmt.Sprintf("dbt env vars set and pointing to Staging (%s)", os.Getenv("DBT_HOST")), nil
 }
 
 // CheckDbtPackages verifies dbt packages have been installed via `dbt deps`
