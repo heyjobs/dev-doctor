@@ -70,6 +70,7 @@ func DefaultRegistry() *Registry {
 	reg.Register("start_docker", StartDocker)
 	reg.Register("install_docker_compose", InstallDockerCompose)
 	reg.Register("install_claude_cli", InstallClaudeCLI)
-	
+	reg.Register("install_homebrew", InstallHomebrew)
+
 	return reg
 }
