@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"time"
@@ -311,31 +312,36 @@ func (r *Runner) RunWithClaudeAssist(ctx context.Context, diagnosticCallback Res
 	return r.buildSummary(results), nil
 }
 
-// applyCureWithOutput runs a cure and captures its output
+// applyCureWithOutput runs a cure and captures its output while showing it to the user
 func (r *Runner) applyCureWithOutput(ctx context.Context, cureID string, output *bytes.Buffer) error {
 	cureFunc, err := r.cureRegistry.Get(cureID)
 	if err != nil {
 		return fmt.Errorf("cure not found: %w", err)
 	}
 
-	// Redirect stdout to capture cure output
+	// Redirect stdout to both the terminal AND our buffer
 	oldStdout := os.Stdout
+	multiWriter := io.MultiWriter(oldStdout, output)
+
 	pr, pw, _ := os.Pipe()
 	os.Stdout = pw
+
+	// Copy from pipe to both destinations in a goroutine
+	done := make(chan struct{})
+	go func() {
+		io.Copy(multiWriter, pr)
+		close(done)
+	}()
 
 	cureCtx, cancel := context.WithTimeout(ctx, r.cureTimeout)
 	defer cancel()
 
 	cureErr := cureFunc(cureCtx)
 
-	// Restore stdout
+	// Restore stdout and wait for copy to complete
 	pw.Close()
+	<-done
 	os.Stdout = oldStdout
-
-	// Read captured output
-	buf := make([]byte, 1024*1024) // 1MB buffer
-	n, _ := pr.Read(buf)
-	output.Write(buf[:n])
 
 	return cureErr
 }
@@ -377,22 +383,12 @@ When you're done, dev-doctor will re-run the diagnostic to verify.
 		return fmt.Errorf("claude CLI not available")
 	}
 
-	// Display context for user
-	fmt.Println("Context being sent to Claude:")
-	fmt.Println("─────────────────────────────")
-	fmt.Println(contextMsg)
-	fmt.Println("─────────────────────────────")
-	fmt.Println()
-
-	// Spawn Claude in interactive mode
-	// User will see the context above and can work on the issue
-	cmd := exec.CommandContext(ctx, "claude")
+	// Spawn Claude with the context message in print mode (non-interactive, auto-exits)
+	// Use --dangerously-skip-permissions since we're fixing system-level issues
+	cmd := exec.CommandContext(ctx, "claude", "--print", "--dangerously-skip-permissions", contextMsg)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-
-	fmt.Println("Opening Claude session... (type your questions or describe what you need to fix)")
-	fmt.Println()
 
 	return cmd.Run()
 }

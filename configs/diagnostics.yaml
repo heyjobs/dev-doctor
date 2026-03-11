@@ -27,14 +27,14 @@ tests:
       - basic
 
 
-  - test: check_git_configuration
-    description: Verify Git user configuration is set
-    diagnostic: git_config
-    cure: configure_git
-    severity: info
-    symptom: Git commits require manual user configuration
-    profiles:
-      - basic
+  # - test: check_git_configuration
+  #   description: Verify Git user configuration is set
+  #   diagnostic: git_config
+  #   cure: configure_git
+  #   severity: info
+  #   symptom: Git commits require manual user configuration
+  #   profiles:
+  #     - basic
 
   # - test: check_brewfile
   #   description: Verify infrastructure tools from Brewfile are installed
