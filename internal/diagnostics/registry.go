@@ -66,6 +66,9 @@ func DefaultRegistry() *Registry {
 	reg.Register("brewfile", CheckBrewfile)
 	reg.Register("vpn_connection", CheckVPNConnection)
 	reg.Register("wasp_version", CheckWaspVersion)
+	reg.Register("valde_test", CheckValdeTest)
+	reg.Register("valde_warning", CheckValdeWarning)
+	reg.Register("valde_critical", CheckValdeCritical)
 
 	return reg
 }

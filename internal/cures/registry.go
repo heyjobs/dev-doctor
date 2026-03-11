@@ -66,6 +66,7 @@ func DefaultRegistry() *Registry {
 	reg.Register("setup_aws_sso", SetupAWSSSO)
 	reg.Register("install_brewfile", InstallBrewfile)
 	reg.Register("install_wasp", InstallWasp)
+	reg.Register("valde_test_cure", ValdeTestCure)
 
 	return reg
 }

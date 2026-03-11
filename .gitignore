@@ -27,3 +27,6 @@ dev-doctor
 # OS specific files
 .DS_Store
 Thumbs.db
+
+# Local notes
+tmp/
