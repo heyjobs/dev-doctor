@@ -8,7 +8,7 @@ This document defines Claude's behavior when spawned by dev-doctor to fix a fail
 
 ## Architecture: dev-doctor Orchestrates Claude
 
-**Important:** dev-doctor controls the workflow, not Claude.
+**Important:** dev-doctor controls the workflow, not Claude. When running in treatment mode, dev-doctor automatically spawns Claude when automated cures fail.
 
 ### The Workflow
 
@@ -144,12 +144,26 @@ Diagnostic passes ✓
 dev-doctor moves to next diagnostic-cure pair
 ```
 
+## Usage
+
+To run dev-doctor with Claude assistance (default in treatment mode):
+
+```bash
+# Interactive mode - select profile and treatment mode
+./dev-doctor
+
+# Command-line mode
+./dev-doctor --profile infrastructure --mode treatment
+```
+
+Treatment mode automatically spawns Claude when automated cures fail. No special flags needed.
+
 ## Implementation Notes
 
 For dev-doctor developers implementing this workflow:
 
-1. **Spawning Claude** - Use `claude` CLI in a new terminal/session
-2. **Passing context** - Write context to a temp file or pipe via stdin
+1. **Spawning Claude** - Use `claude` CLI with `claude chat --message`
+2. **Passing context** - Pass diagnostic details, cure output, and errors as message
 3. **Detecting completion** - Wait for Claude session to exit
 4. **Re-running diagnostic** - After Claude exits, verify fix worked
-5. **Loop until success** - Keep spawning Claude until diagnostic passes
+5. **Loop until success** - Keep spawning Claude until diagnostic passes (max 3 attempts)

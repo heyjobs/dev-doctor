@@ -36,7 +36,7 @@ misconfigured services, and more.`,
 
 	cmd.Flags().StringVarP(&configPath, "config", "c", "", "Path to diagnostics configuration file")
 	cmd.Flags().BoolVarP(&quietMode, "quiet", "q", false, "Suppress progress messages")
-	cmd.Flags().StringVarP(&modeFlag, "mode", "m", "", "Consultation mode: 'diagnosis' or 'treatment' (skips interactive prompt)")
+	cmd.Flags().StringVarP(&modeFlag, "mode", "m", "", "Consultation mode: 'diagnosis' or 'treatment' (treatment spawns Claude if cures fail)")
 	cmd.Flags().StringVarP(&profileFlag, "profile", "p", "", "Profile to run: 'basic', 'infrastructure', or 'data' (skips interactive prompt)")
 
 	return cmd
@@ -98,10 +98,8 @@ func runDiagnostics(cmd *cobra.Command, args []string) error {
 			mode = types.ModeDiagnosisOnly
 		case "treatment":
 			mode = types.ModeDiagnosisAndTreatment
-		case "claude-assist", "auto-fix":
-			mode = types.ModeClaudeAssist
 		default:
-			return fmt.Errorf("invalid mode: %s (must be 'diagnosis', 'treatment', or 'claude-assist')", modeFlag)
+			return fmt.Errorf("invalid mode: %s (must be 'diagnosis' or 'treatment')", modeFlag)
 		}
 	} else {
 		// Prompt interactively
@@ -119,10 +117,10 @@ func runDiagnostics(cmd *cobra.Command, args []string) error {
 	var summary *types.Summary
 
 	// Handle different modes
-	if mode == types.ModeClaudeAssist {
-		// Claude-assisted mode: process diagnostic-cure pairs sequentially with Claude help
+	if mode == types.ModeDiagnosisAndTreatment {
+		// Treatment mode: process diagnostic-cure pairs sequentially with Claude help when needed
 		if !quietMode {
-			printSectionHeader("Claude-Assisted Diagnosis and Treatment")
+			printSectionHeader("Diagnosis and Treatment")
 			fmt.Println()
 		}
 
@@ -132,10 +130,10 @@ func runDiagnostics(cmd *cobra.Command, args []string) error {
 			}
 		})
 		if err != nil {
-			return fmt.Errorf("claude-assisted execution failed: %w", err)
+			return fmt.Errorf("treatment execution failed: %w", err)
 		}
 	} else {
-		// Standard modes: run all diagnostics, then optionally apply treatments
+		// Diagnosis-only mode: just check without fixing
 		if !quietMode {
 			printSectionHeader("Running Diagnostic Chart")
 			fmt.Println()
@@ -148,25 +146,6 @@ func runDiagnostics(cmd *cobra.Command, args []string) error {
 		})
 		if err != nil {
 			return fmt.Errorf("diagnostic execution failed: %w", err)
-		}
-
-		// Apply treatments if requested
-		if mode == types.ModeDiagnosisAndTreatment {
-			unhealthyResults := getUnhealthyResults(summary.Results)
-			if len(unhealthyResults) > 0 {
-				fmt.Println()
-				printSectionHeader("Applying Treatments")
-				fmt.Println()
-
-				err := r.ApplyTreatmentsWithCallback(ctx, unhealthyResults, func(result types.DiagnosticResult) {
-					if !quietMode {
-						printTreatmentHeader(result)
-					}
-				})
-				if err != nil {
-					return fmt.Errorf("treatment application failed: %w", err)
-				}
-			}
 		}
 	}
 
@@ -225,8 +204,7 @@ func promptConsultationMode() (types.ConsultationMode, error) {
 				Description("Choose how you want dev-doctor to operate").
 				Options(
 					huh.NewOption("Diagnosis only - identify issues without fixing", "diagnosis_only"),
-					huh.NewOption("Diagnosis + treatments - identify and fix issues automatically", "diagnosis_and_treatment"),
-					huh.NewOption("Claude-assisted - spawn Claude to fix issues when automated cures fail", "claude_assist"),
+					huh.NewOption("Treatment - fix issues automatically (spawns Claude if automated cures fail)", "diagnosis_and_treatment"),
 				).
 				Value(&mode),
 		),

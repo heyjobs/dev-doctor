@@ -2,7 +2,7 @@
 description: Manually run dev-doctor diagnostics and intelligently fix issues
 ---
 
-**Note**: This is for MANUAL/INTERACTIVE use. In production, dev-doctor spawns Claude automatically when cures fail (see CLAUDE.md for the automatic workflow).
+**Note**: This is for MANUAL/INTERACTIVE use. In production, dev-doctor's treatment mode automatically spawns Claude when cures fail (see CLAUDE.md for details).
 
 You are helping the user manually run dev-doctor diagnostics and fix development environment issues.
 

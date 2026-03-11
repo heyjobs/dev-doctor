@@ -61,7 +61,6 @@ type ConsultationMode string
 const (
 	ModeDiagnosisOnly         ConsultationMode = "diagnosis_only"
 	ModeDiagnosisAndTreatment ConsultationMode = "diagnosis_and_treatment"
-	ModeClaudeAssist          ConsultationMode = "claude_assist"
 )
 
 // DiagnosticConfig represents the root configuration structure
