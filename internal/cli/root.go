@@ -197,7 +197,7 @@ func promptProfile() (string, error) {
 					huh.NewOption("Basic - core developer tools only", "basic"),
 					huh.NewOption("Infrastructure - basic + platform tools (Docker, OpenTofu)", "infrastructure"),
 					huh.NewOption("Data - basic + data engineering tools (Python)", "data"),
-				huh.NewOption("dbt Analytics - bi_analytics_dbt project setup", "dbt_analytics"),
+				    huh.NewOption("dbt Analytics - bi_analytics_dbt project setup", "dbt_analytics"),
 				).
 				Value(&profile),
 		),
