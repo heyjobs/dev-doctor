@@ -255,22 +255,20 @@ func (r *Runner) RunWithClaudeAssist(ctx context.Context, diagnosticCallback Res
 		fmt.Println()
 
 		cureOutput := &bytes.Buffer{}
-		cureErr := r.applyCureWithOutput(ctx, result.CureID, cureOutput)
+		_ = r.applyCureWithOutput(ctx, result.CureID, cureOutput)
 
-		if cureErr == nil {
-			// Verify cure worked
-			verifyResult, err := r.runSingleDiagnostic(ctx, test)
-			if err == nil && verifyResult.Status == types.StatusHealthy {
-				fmt.Println()
-				fmt.Println("  ✓ Cure succeeded!")
-				results[i] = verifyResult
-				continue
-			}
+		// Always verify the diagnostic after the cure runs
+		fmt.Println()
+		verifyResult, err := r.runSingleDiagnostic(ctx, test)
+		if err == nil && verifyResult.Status == types.StatusHealthy {
+			fmt.Println("  ✓ Diagnostic now passing!")
+			fmt.Println()
+			results[i] = verifyResult
+			continue
 		}
 
-		// Cure failed - spawn Claude
-		fmt.Println()
-		fmt.Println("  ✖ Automated cure failed")
+		// Diagnostic still failing - spawn Claude
+		fmt.Println("  ✖ Diagnostic still failing after cure")
 		fmt.Println("  🤖 Spawning Claude to fix this issue...")
 		fmt.Println()
 
@@ -383,9 +381,9 @@ When you're done, dev-doctor will re-run the diagnostic to verify.
 		return fmt.Errorf("claude CLI not available")
 	}
 
-	// Spawn Claude with the context message in print mode (non-interactive, auto-exits)
-	// Use --dangerously-skip-permissions since we're fixing system-level issues
-	cmd := exec.CommandContext(ctx, "claude", "--print", "--dangerously-skip-permissions", contextMsg)
+	// Spawn Claude in one-shot mode with --print for auto-exit
+	// Use --permission-mode default to ensure permission prompts still appear
+	cmd := exec.CommandContext(ctx, "claude", "--print", "--permission-mode", "default", contextMsg)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

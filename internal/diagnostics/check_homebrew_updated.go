@@ -10,22 +10,12 @@ import (
 	"github.com/yourusername/dev-doctor/internal/types"
 )
 
-// CheckHomebrewUpdated verifies that Homebrew is up to date
+// CheckHomebrewUpdated verifies that Homebrew formula index is up to date
+// Note: This checks if the formula index has been updated recently, not if packages are outdated
 func CheckHomebrewUpdated(ctx context.Context) (types.Status, string, error) {
 	// First check brew is installed
 	if exec.CommandContext(ctx, "brew", "--version").Run() != nil {
 		return types.StatusCritical, "Homebrew is not installed", nil
-	}
-
-	cmd := exec.CommandContext(ctx, "brew", "outdated", "--verbose")
-	output, err := cmd.Output()
-	if err != nil {
-		return types.StatusWarning, "Could not check Homebrew update status", nil
-	}
-
-	outdated := strings.TrimSpace(string(output))
-	if outdated != "" {
-		return types.StatusWarning, "Homebrew has outdated packages", nil
 	}
 
 	// Check if brew's formula index is stale (not updated in 7 days)
@@ -45,5 +35,5 @@ func CheckHomebrewUpdated(ctx context.Context) (types.Status, string, error) {
 		return types.StatusWarning, "Homebrew formulae are not up to date", nil
 	}
 
-	return types.StatusHealthy, "Homebrew is up to date", nil
+	return types.StatusHealthy, "Homebrew formula index is up to date", nil
 }
