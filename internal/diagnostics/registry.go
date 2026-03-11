@@ -55,6 +55,13 @@ func (r *Registry) List() []string {
 func DefaultRegistry() *Registry {
 	reg := NewRegistry()
 
+	// dbt analytics diagnostics
+	reg.Register("dbt_analytics_venv_active", CheckDbtAnalyticsVenvActive)
+	reg.Register("dbt_installed", CheckDbtInstalled)
+	reg.Register("dbt_venv", CheckDbtVenv)
+	reg.Register("dbt_secret_config", CheckDbtSecretConfig)
+	reg.Register("dbt_packages", CheckDbtPackages)
+
 	// Valde tests
 	reg.Register("valde_test", CheckValdeTest)
 	reg.Register("valde_warning", CheckValdeWarning)

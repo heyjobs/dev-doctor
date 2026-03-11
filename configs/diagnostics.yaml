@@ -99,6 +99,51 @@ tests:
     profiles:
       - data
 
+  - test: check_dbt_analytics_venv_active
+    description: Verify bi_analytics_dbt Python venv is active
+    diagnostic: dbt_analytics_venv_active
+    cure: setup_dbt_venv
+    severity: critical
+    symptom: start_env.sh and dbt commands will fail - venv must be activated first
+    profiles:
+      - dbt_analytics
+
+  - test: check_dbt_installed
+    description: Verify dbt is installed with the Redshift adapter
+    diagnostic: dbt_installed
+    cure: install_dbt_redshift
+    severity: critical
+    symptom: Cannot run any dbt commands against Redshift
+    profiles:
+      - dbt_analytics
+
+  - test: check_dbt_venv
+    description: Verify Python venv exists in bi_analytics_dbt project
+    diagnostic: dbt_venv
+    cure: setup_dbt_venv
+    severity: critical
+    symptom: start_env.sh fails - venv/bin/activate not found
+    profiles:
+      - dbt_analytics
+
+  - test: check_dbt_secret_config
+    description: Verify secret_config.env exists with Redshift credentials configured
+    diagnostic: dbt_secret_config
+    cure: setup_dbt_secret_config
+    severity: critical
+    symptom: dbt cannot connect to Redshift - credentials missing or unconfigured
+    profiles:
+      - dbt_analytics
+
+  - test: check_dbt_packages
+    description: Verify dbt packages are installed (dbt deps has been run)
+    diagnostic: dbt_packages
+    cure: run_dbt_deps
+    severity: warning
+    symptom: dbt compile fails - packages like dbt_utils and dbt_expectations are missing
+    profiles:
+      - dbt_analytics
+
   - test: valde_test
     description: Valde test - always healthy
     diagnostic: valde_test
