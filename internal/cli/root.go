@@ -118,17 +118,33 @@ func runDiagnostics(cmd *cobra.Command, args []string) error {
 
 	// Handle different modes
 	if mode == types.ModeDiagnosisAndTreatment {
-		// Treatment mode: process diagnostic-cure pairs sequentially with Claude help when needed
+		// Treatment mode: show diagnostic chart first, then apply cures with Claude help
 		if !quietMode {
-			printSectionHeader("Diagnosis and Treatment")
+			printSectionHeader("Running Diagnostic Chart")
 			fmt.Println()
 		}
 
-		summary, err = r.RunWithClaudeAssist(ctx, func(result types.DiagnosticResult) {
-			if !quietMode {
-				printTreatmentHeader(result)
-			}
-		})
+		treatmentHeaderShown := false
+		summary, err = r.RunWithClaudeAssist(ctx,
+			// Diagnostic callback - show results as they complete
+			func(result types.DiagnosticResult) {
+				if !quietMode {
+					printResult(result)
+				}
+			},
+			// Treatment callback - show treatment headers
+			func(result types.DiagnosticResult) {
+				if !quietMode {
+					if !treatmentHeaderShown {
+						fmt.Println()
+						printSectionHeader("Applying Treatments")
+						fmt.Println()
+						treatmentHeaderShown = true
+					}
+					printTreatmentHeader(result)
+				}
+			},
+		)
 		if err != nil {
 			return fmt.Errorf("treatment execution failed: %w", err)
 		}

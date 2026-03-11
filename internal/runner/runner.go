@@ -203,15 +203,12 @@ func (r *Runner) SetCureTimeout(timeout time.Duration) {
 	r.cureTimeout = timeout
 }
 
-// RunWithClaudeAssist processes diagnostic-cure pairs sequentially,
-// spawning Claude sessions when cures fail
-func (r *Runner) RunWithClaudeAssist(ctx context.Context, callback TreatmentCallback) (*types.Summary, error) {
+// RunWithClaudeAssist runs diagnostics first (showing chart), then applies cures with Claude assistance
+func (r *Runner) RunWithClaudeAssist(ctx context.Context, diagnosticCallback ResultCallback, treatmentCallback TreatmentCallback) (*types.Summary, error) {
+	// Phase 1: Run all diagnostics and show chart
 	results := make([]types.DiagnosticResult, 0, len(r.config.Tests))
 
 	for _, test := range r.config.Tests {
-		fmt.Printf("\n🔍 Checking: %s\n", test.Description)
-
-		// Run diagnostic
 		result, err := r.runSingleDiagnostic(ctx, test)
 		if err != nil {
 			result = types.DiagnosticResult{
@@ -227,23 +224,34 @@ func (r *Runner) RunWithClaudeAssist(ctx context.Context, callback TreatmentCall
 		}
 		results = append(results, result)
 
-		// If healthy, move to next
+		// Show diagnostic result immediately
+		if diagnosticCallback != nil {
+			diagnosticCallback(result)
+		}
+	}
+
+	// Phase 2: Apply cures to failed diagnostics with Claude assistance
+	for i, result := range results {
+		test := r.config.Tests[i]
+
+		// Skip healthy results
 		if result.Status == types.StatusHealthy {
-			fmt.Println("  ✓ Healthy")
 			continue
 		}
 
-		// If no cure available, skip
+		// Skip if no cure available
 		if !result.FixAvailable || result.CureID == "" {
-			fmt.Printf("  ⚠ %s (no automated cure available)\n", result.Status)
 			continue
+		}
+
+		// Show treatment header
+		if treatmentCallback != nil {
+			treatmentCallback(result)
 		}
 
 		// Try automated cure
-		fmt.Printf("\n💊 Applying cure: %s\n", result.CureID)
-		if callback != nil {
-			callback(result)
-		}
+		fmt.Printf("💊 Applying cure: %s\n", result.CureID)
+		fmt.Println()
 
 		cureOutput := &bytes.Buffer{}
 		cureErr := r.applyCureWithOutput(ctx, result.CureID, cureOutput)
@@ -252,19 +260,23 @@ func (r *Runner) RunWithClaudeAssist(ctx context.Context, callback TreatmentCall
 			// Verify cure worked
 			verifyResult, err := r.runSingleDiagnostic(ctx, test)
 			if err == nil && verifyResult.Status == types.StatusHealthy {
+				fmt.Println()
 				fmt.Println("  ✓ Cure succeeded!")
-				results[len(results)-1] = verifyResult
+				results[i] = verifyResult
 				continue
 			}
 		}
 
 		// Cure failed - spawn Claude
-		fmt.Println("\n  ✖ Automated cure failed")
+		fmt.Println()
+		fmt.Println("  ✖ Automated cure failed")
 		fmt.Println("  🤖 Spawning Claude to fix this issue...")
+		fmt.Println()
 
 		claudeErr := r.spawnClaude(ctx, test, result, cureOutput.String())
 		if claudeErr != nil {
 			fmt.Printf("  ✖ Failed to spawn Claude: %v\n", claudeErr)
+			fmt.Println()
 			continue
 		}
 
@@ -275,19 +287,23 @@ func (r *Runner) RunWithClaudeAssist(ctx context.Context, callback TreatmentCall
 			verifyResult, err := r.runSingleDiagnostic(ctx, test)
 			if err == nil && verifyResult.Status == types.StatusHealthy {
 				fmt.Println("  ✓ Issue resolved!")
-				results[len(results)-1] = verifyResult
+				fmt.Println()
+				results[i] = verifyResult
 				break
 			}
 
 			if attempt < maxAttempts {
 				fmt.Println("  ✖ Still failing, spawning Claude again...")
+				fmt.Println()
 				claudeErr := r.spawnClaude(ctx, test, result, cureOutput.String())
 				if claudeErr != nil {
 					fmt.Printf("  ✖ Failed to spawn Claude: %v\n", claudeErr)
+					fmt.Println()
 					break
 				}
 			} else {
 				fmt.Println("  ✖ Max attempts reached, moving to next diagnostic")
+				fmt.Println()
 			}
 		}
 	}
