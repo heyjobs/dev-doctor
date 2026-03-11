@@ -86,6 +86,11 @@ func (r *Runner) runSingleDiagnostic(ctx context.Context, test types.DiagnosticT
 		return types.DiagnosticResult{}, err
 	}
 
+	// Override status based on severity from config when check fails
+	if status != types.StatusHealthy {
+		status = severityToStatus(test.Severity)
+	}
+
 	// Check if cure is available
 	fixAvailable := false
 	if test.Cure != "" {
@@ -103,6 +108,20 @@ func (r *Runner) runSingleDiagnostic(ctx context.Context, test types.DiagnosticT
 		FixAvailable: fixAvailable,
 		Severity:     test.Severity,
 	}, nil
+}
+
+// severityToStatus maps severity from config to status
+func severityToStatus(severity types.Severity) types.Status {
+	switch severity {
+	case types.SeverityCritical:
+		return types.StatusCritical
+	case types.SeverityWarning:
+		return types.StatusWarning
+	case types.SeverityInfo:
+		return types.StatusWarning
+	default:
+		return types.StatusWarning
+	}
 }
 
 // TreatmentCallback is called before each treatment is applied
