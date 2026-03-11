@@ -24,24 +24,42 @@ This reduces environment-related support requests and helps developers maintain 
 
 - Go 1.21 or later
 
-### Build from source
+### Quick Install (Recommended)
 
 ```bash
+git clone <repository-url>
 cd dev-doctor
-go mod download
-go build -o dev-doctor cmd/dev-doctor/main.go
+make install
 ```
 
-### Run
+This installs `dev-doctor` to `~/bin`. Make sure `~/bin` is in your PATH:
 
 ```bash
+echo 'export PATH="$HOME/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+### Alternative: System-wide Install
+
+To install to `/usr/local/bin` (requires sudo):
+
+```bash
+make install-global
+```
+
+### Build Only (No Install)
+
+```bash
+make build
 ./dev-doctor
 ```
 
-Or install globally:
+### Uninstall
 
 ```bash
-go install ./cmd/dev-doctor
+make uninstall          # Remove from ~/bin
+# or
+make uninstall-global   # Remove from /usr/local/bin
 ```
 
 ## Usage
