@@ -98,8 +98,10 @@ func runDiagnostics(cmd *cobra.Command, args []string) error {
 			mode = types.ModeDiagnosisOnly
 		case "treatment":
 			mode = types.ModeDiagnosisAndTreatment
+		case "claude-assist", "auto-fix":
+			mode = types.ModeClaudeAssist
 		default:
-			return fmt.Errorf("invalid mode: %s (must be 'diagnosis' or 'treatment')", modeFlag)
+			return fmt.Errorf("invalid mode: %s (must be 'diagnosis', 'treatment', or 'claude-assist')", modeFlag)
 		}
 	} else {
 		// Prompt interactively
@@ -112,37 +114,58 @@ func runDiagnostics(cmd *cobra.Command, args []string) error {
 		fmt.Println()
 	}
 
-	if !quietMode {
-		printSectionHeader("Running Diagnostic Chart")
-		fmt.Println()
-	}
-
-	// Create runner and execute diagnostics with real-time output
+	// Create runner
 	r := runner.NewRunner(cfg)
-	summary, err := r.RunDiagnosticsWithCallback(ctx, func(result types.DiagnosticResult) {
+	var summary *types.Summary
+
+	// Handle different modes
+	if mode == types.ModeClaudeAssist {
+		// Claude-assisted mode: process diagnostic-cure pairs sequentially with Claude help
 		if !quietMode {
-			printResult(result)
+			printSectionHeader("Claude-Assisted Diagnosis and Treatment")
+			fmt.Println()
 		}
-	})
-	if err != nil {
-		return fmt.Errorf("diagnostic execution failed: %w", err)
-	}
 
-	// Apply treatments if requested
-	if mode == types.ModeDiagnosisAndTreatment {
-		unhealthyResults := getUnhealthyResults(summary.Results)
-		if len(unhealthyResults) > 0 {
+		summary, err = r.RunWithClaudeAssist(ctx, func(result types.DiagnosticResult) {
+			if !quietMode {
+				printTreatmentHeader(result)
+			}
+		})
+		if err != nil {
+			return fmt.Errorf("claude-assisted execution failed: %w", err)
+		}
+	} else {
+		// Standard modes: run all diagnostics, then optionally apply treatments
+		if !quietMode {
+			printSectionHeader("Running Diagnostic Chart")
 			fmt.Println()
-			printSectionHeader("Applying Treatments")
-			fmt.Println()
+		}
 
-			err := r.ApplyTreatmentsWithCallback(ctx, unhealthyResults, func(result types.DiagnosticResult) {
-				if !quietMode {
-					printTreatmentHeader(result)
+		summary, err = r.RunDiagnosticsWithCallback(ctx, func(result types.DiagnosticResult) {
+			if !quietMode {
+				printResult(result)
+			}
+		})
+		if err != nil {
+			return fmt.Errorf("diagnostic execution failed: %w", err)
+		}
+
+		// Apply treatments if requested
+		if mode == types.ModeDiagnosisAndTreatment {
+			unhealthyResults := getUnhealthyResults(summary.Results)
+			if len(unhealthyResults) > 0 {
+				fmt.Println()
+				printSectionHeader("Applying Treatments")
+				fmt.Println()
+
+				err := r.ApplyTreatmentsWithCallback(ctx, unhealthyResults, func(result types.DiagnosticResult) {
+					if !quietMode {
+						printTreatmentHeader(result)
+					}
+				})
+				if err != nil {
+					return fmt.Errorf("treatment application failed: %w", err)
 				}
-			})
-			if err != nil {
-				return fmt.Errorf("treatment application failed: %w", err)
 			}
 		}
 	}
@@ -203,6 +226,7 @@ func promptConsultationMode() (types.ConsultationMode, error) {
 				Options(
 					huh.NewOption("Diagnosis only - identify issues without fixing", "diagnosis_only"),
 					huh.NewOption("Diagnosis + treatments - identify and fix issues automatically", "diagnosis_and_treatment"),
+					huh.NewOption("Claude-assisted - spawn Claude to fix issues when automated cures fail", "claude_assist"),
 				).
 				Value(&mode),
 		),
