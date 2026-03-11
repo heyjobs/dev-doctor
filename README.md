@@ -13,10 +13,10 @@ This reduces environment-related support requests and helps developers maintain 
 - **Modular diagnostic system** - easily extensible with new checks
 - **YAML-based configuration** - define tests declaratively
 - **Interactive CLI** - polished user experience with colored output
-- **Two consultation modes:**
+- **Two modes:**
   - **Diagnosis only** - identify issues without making changes
-  - **Diagnosis + treatments** - identify and automatically fix issues
-- **Mock diagnostics** - this first iteration uses mocked results to demonstrate the system
+  - **Treatment** - identify and automatically fix issues with automated cures
+- **Automated cures** - automatically fixes common issues (outdated packages, missing tools, etc.)
 
 ## Installation
 

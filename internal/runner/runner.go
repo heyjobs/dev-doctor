@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"time"
 
 	"github.com/yourusername/dev-doctor/internal/cures"
@@ -204,8 +203,8 @@ func (r *Runner) SetCureTimeout(timeout time.Duration) {
 	r.cureTimeout = timeout
 }
 
-// RunWithClaudeAssist runs diagnostics first (showing chart), then applies cures with Claude assistance
-func (r *Runner) RunWithClaudeAssist(ctx context.Context, diagnosticCallback ResultCallback, treatmentCallback TreatmentCallback) (*types.Summary, error) {
+// RunWithTreatments runs diagnostics first (showing chart), then applies cures
+func (r *Runner) RunWithTreatments(ctx context.Context, diagnosticCallback ResultCallback, treatmentCallback TreatmentCallback) (*types.Summary, error) {
 	// Phase 1: Run all diagnostics and show chart
 	results := make([]types.DiagnosticResult, 0, len(r.config.Tests))
 
@@ -231,7 +230,7 @@ func (r *Runner) RunWithClaudeAssist(ctx context.Context, diagnosticCallback Res
 		}
 	}
 
-	// Phase 2: Apply cures to failed diagnostics with Claude assistance
+	// Phase 2: Apply cures to failed diagnostics
 	for i, result := range results {
 		test := r.config.Tests[i]
 
@@ -259,8 +258,16 @@ func (r *Runner) RunWithClaudeAssist(ctx context.Context, diagnosticCallback Res
 		fmt.Printf("💊 Applying cure: %s\n", result.CureID)
 		fmt.Println()
 
-		cureOutput := &bytes.Buffer{}
-		_ = r.applyCureWithOutput(ctx, result.CureID, cureOutput)
+		cureFunc, err := r.cureRegistry.Get(result.CureID)
+		if err != nil {
+			fmt.Printf("  ✖ Cure not found: %v\n", err)
+			fmt.Println()
+			continue
+		}
+
+		cureCtx, cancel := context.WithTimeout(ctx, r.cureTimeout)
+		cureErr := cureFunc(cureCtx)
+		cancel()
 
 		// Always verify the diagnostic after the cure runs
 		fmt.Println()
@@ -272,44 +279,14 @@ func (r *Runner) RunWithClaudeAssist(ctx context.Context, diagnosticCallback Res
 			continue
 		}
 
-		// Diagnostic still failing - spawn Claude
-		fmt.Println("  ✖ Diagnostic still failing after cure")
-		fmt.Println("  🤖 Spawning Claude to fix this issue...")
+		// Diagnostic still failing after cure
+		if cureErr != nil {
+			fmt.Printf("  ✖ Cure failed: %v\n", cureErr)
+		} else {
+			fmt.Println("  ✖ Diagnostic still failing after cure")
+		}
+		fmt.Println("  ℹ  Manual intervention may be required")
 		fmt.Println()
-
-		claudeErr := r.spawnClaude(ctx, test, result, cureOutput.String())
-		if claudeErr != nil {
-			fmt.Printf("  ✖ Failed to spawn Claude: %v\n", claudeErr)
-			fmt.Println()
-			continue
-		}
-
-		// Re-run diagnostic after Claude fixes it
-		maxAttempts := 3
-		for attempt := 1; attempt <= maxAttempts; attempt++ {
-			fmt.Printf("\n🔍 Verifying fix (attempt %d/%d)...\n", attempt, maxAttempts)
-			verifyResult, err := r.runSingleDiagnostic(ctx, test)
-			if err == nil && verifyResult.Status == types.StatusHealthy {
-				fmt.Println("  ✓ Issue resolved!")
-				fmt.Println()
-				results[i] = verifyResult
-				break
-			}
-
-			if attempt < maxAttempts {
-				fmt.Println("  ✖ Still failing, spawning Claude again...")
-				fmt.Println()
-				claudeErr := r.spawnClaude(ctx, test, result, cureOutput.String())
-				if claudeErr != nil {
-					fmt.Printf("  ✖ Failed to spawn Claude: %v\n", claudeErr)
-					fmt.Println()
-					break
-				}
-			} else {
-				fmt.Println("  ✖ Max attempts reached, moving to next diagnostic")
-				fmt.Println()
-			}
-		}
 	}
 
 	return r.buildSummary(results), nil
@@ -349,49 +326,3 @@ func (r *Runner) applyCureWithOutput(ctx context.Context, cureID string, output 
 	return cureErr
 }
 
-// spawnClaude spawns a Claude session with context about the failure
-func (r *Runner) spawnClaude(ctx context.Context, test types.DiagnosticTest, result types.DiagnosticResult, cureOutput string) error {
-	// Create context message for Claude
-	contextMsg := fmt.Sprintf(`dev-doctor failed to fix this issue automatically. Please help fix it.
-
-## Diagnostic Information
-
-**Test**: %s
-**Description**: %s
-**Status**: %s [%s]
-**Symptom**: %s
-
-## Automated Cure Attempted
-
-**Cure ID**: %s
-**Cure Output**:
-%s
-
-## Your Task
-
-The automated cure failed. Please:
-1. Analyze what went wrong
-2. Fix the issue using alternative methods
-3. Verify the fix works
-
-When you're done, dev-doctor will re-run the diagnostic to verify.
-`, test.Test, test.Description, result.Status, result.Severity, test.Symptom, result.CureID, cureOutput)
-
-	// Check if claude CLI is available
-	if _, err := exec.LookPath("claude"); err != nil {
-		fmt.Println("\n⚠ Claude CLI not found. Please install it to enable automatic fixing:")
-		fmt.Println("  https://docs.claude.com/claude-code")
-		fmt.Println("\nManual fix required:")
-		fmt.Println(contextMsg)
-		return fmt.Errorf("claude CLI not available")
-	}
-
-	// Spawn Claude in one-shot mode with --print for auto-exit
-	// Use --permission-mode default to ensure permission prompts still appear
-	cmd := exec.CommandContext(ctx, "claude", "--print", "--permission-mode", "default", contextMsg)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	return cmd.Run()
-}
