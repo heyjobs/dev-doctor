@@ -26,7 +26,7 @@ func NewRunner(config *types.DiagnosticConfig) *Runner {
 		cureRegistry:       cures.DefaultRegistry(),
 		config:             config,
 		diagnosticTimeout:  30 * time.Second, // Default timeout per diagnostic
-		cureTimeout:        10 * time.Minute, // Default timeout per cure (longer for installations)
+		cureTimeout:        30 * time.Minute, // Default timeout per cure (longer for brew installations which can be slow)
 	}
 }
 
