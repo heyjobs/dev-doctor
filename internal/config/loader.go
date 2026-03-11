@@ -1,6 +1,7 @@
 package config
 
 import (
+	_ "embed"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -8,6 +9,9 @@ import (
 	"github.com/yourusername/dev-doctor/internal/types"
 	"gopkg.in/yaml.v3"
 )
+
+//go:embed embedded/diagnostics.yaml
+var embeddedConfig []byte
 
 // Loader handles loading and parsing diagnostic configuration
 type Loader struct {
@@ -23,15 +27,18 @@ func NewLoader(configPath string) *Loader {
 
 // Load reads and parses the diagnostic configuration file
 func (l *Loader) Load() (*types.DiagnosticConfig, error) {
-	// If no config path provided, use default
-	if l.configPath == "" {
-		l.configPath = l.getDefaultConfigPath()
-	}
+	var data []byte
+	var err error
 
-	// Read the file
-	data, err := os.ReadFile(l.configPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read config file: %w", err)
+	// If a specific config path is provided, use it
+	if l.configPath != "" {
+		data, err = os.ReadFile(l.configPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read config file: %w", err)
+		}
+	} else {
+		// Use embedded config by default
+		data = embeddedConfig
 	}
 
 	// Parse YAML
