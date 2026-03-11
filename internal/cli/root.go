@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/huh"
 	"github.com/fatih/color"
@@ -36,7 +37,7 @@ misconfigured services, and more.`,
 
 	cmd.Flags().StringVarP(&configPath, "config", "c", "", "Path to diagnostics configuration file")
 	cmd.Flags().BoolVarP(&quietMode, "quiet", "q", false, "Suppress progress messages")
-	cmd.Flags().StringVarP(&modeFlag, "mode", "m", "", "Consultation mode: 'diagnosis' or 'treatment' (treatment spawns Claude if cures fail)")
+	cmd.Flags().StringVarP(&modeFlag, "mode", "m", "", "Mode: 'diagnosis' (check only) or 'treatment' (check and fix)")
 	cmd.Flags().StringVarP(&profileFlag, "profile", "p", "", "Profile to run: 'basic', 'infrastructure', 'data', or 'dbt_analytics' (skips interactive prompt)")
 
 	return cmd
@@ -118,14 +119,14 @@ func runDiagnostics(cmd *cobra.Command, args []string) error {
 
 	// Handle different modes
 	if mode == types.ModeDiagnosisAndTreatment {
-		// Treatment mode: show diagnostic chart first, then apply cures with Claude help
+		// Treatment mode: show diagnostic chart first, then apply cures
 		if !quietMode {
 			printSectionHeader("Running Diagnostic Chart")
 			fmt.Println()
 		}
 
 		treatmentHeaderShown := false
-		summary, err = r.RunWithClaudeAssist(ctx,
+		summary, err = r.RunWithTreatments(ctx,
 			// Diagnostic callback - show results as they complete
 			func(result types.DiagnosticResult) {
 				if !quietMode {
@@ -217,11 +218,11 @@ func promptConsultationMode() (types.ConsultationMode, error) {
 	form := huh.NewForm(
 		huh.NewGroup(
 			huh.NewSelect[string]().
-				Title("Select consultation mode").
+				Title("Select mode").
 				Description("Choose how you want dev-doctor to operate").
 				Options(
 					huh.NewOption("Diagnosis only - identify issues without fixing", "diagnosis_only"),
-					huh.NewOption("Treatment - fix issues automatically (spawns Claude if automated cures fail)", "diagnosis_and_treatment"),
+					huh.NewOption("Treatment - identify and fix issues automatically", "diagnosis_and_treatment"),
 				).
 				Value(&mode),
 		),
@@ -276,11 +277,16 @@ func printResult(result types.DiagnosticResult) {
 	if result.Status != types.StatusHealthy {
 		dimmed := color.New(color.Faint)
 		dimmed.Printf("  └─ %s\n", result.Summary)
+		time.Sleep(500 * time.Millisecond)
 		if result.Symptom != "" {
 			italic := color.New(color.Faint, color.Italic)
 			italic.Printf("     Impact: %s\n", result.Symptom)
+			time.Sleep(500 * time.Millisecond)
 		}
 	}
+
+	// Pause for readability between diagnostic results
+	time.Sleep(1 * time.Second)
 }
 
 // printTreatmentHeader displays a visual header before each treatment

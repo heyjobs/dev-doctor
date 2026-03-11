@@ -28,7 +28,7 @@ go build -o dev-doctor ./cmd/dev-doctor
 
 ### 3. Run Diagnostics to Identify Issues
 
-Run dev-doctor in diagnosis mode and **show the full output**:
+Run dev-doctor in diagnosis mode and **respond with the full output**:
 ```bash
 ./dev-doctor --profile <PROFILE> --mode diagnosis
 ```
@@ -108,7 +108,7 @@ After processing all failing diagnostics, provide:
 
 ## Important Rules
 
-1. **Show all terminal output** - User needs to see the actual program output from each diagnostic and cure run
+1. **Respond with terminal output** - User needs to see the actual program output from each diagnostic and cure run
 2. **One diagnostic at a time** - Process each failing diagnostic-cure pair separately, don't batch them
 3. **Fix environments, not code** - Don't suggest changes to dev-doctor's cure code. Cures work in most cases, but environments differ and sometimes need manual intervention.
 4. **Verify each fix** - Always re-run diagnostics after applying a cure
