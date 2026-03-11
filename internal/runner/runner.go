@@ -377,11 +377,22 @@ When you're done, dev-doctor will re-run the diagnostic to verify.
 		return fmt.Errorf("claude CLI not available")
 	}
 
-	// Spawn Claude with context
-	cmd := exec.CommandContext(ctx, "claude", "chat", "--message", contextMsg)
+	// Display context for user
+	fmt.Println("Context being sent to Claude:")
+	fmt.Println("─────────────────────────────")
+	fmt.Println(contextMsg)
+	fmt.Println("─────────────────────────────")
+	fmt.Println()
+
+	// Spawn Claude in interactive mode
+	// User will see the context above and can work on the issue
+	cmd := exec.CommandContext(ctx, "claude")
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+
+	fmt.Println("Opening Claude session... (type your questions or describe what you need to fix)")
+	fmt.Println()
 
 	return cmd.Run()
 }
