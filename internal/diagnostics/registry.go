@@ -55,6 +55,11 @@ func (r *Registry) List() []string {
 func DefaultRegistry() *Registry {
 	reg := NewRegistry()
 
+	// Valde tests
+	reg.Register("valde_test", CheckValdeTest)
+	reg.Register("valde_warning", CheckValdeWarning)
+	reg.Register("valde_critical", CheckValdeCritical)
+
 	// Register all mock implementations
 	reg.Register("git_config", CheckGitConfiguration)
 	reg.Register("opentofu_version", CheckOpenTofuVersion)
@@ -66,9 +71,9 @@ func DefaultRegistry() *Registry {
 	reg.Register("brewfile", CheckBrewfile)
 	reg.Register("vpn_connection", CheckVPNConnection)
 	reg.Register("wasp_version", CheckWaspVersion)
-	reg.Register("valde_test", CheckValdeTest)
-	reg.Register("valde_warning", CheckValdeWarning)
-	reg.Register("valde_critical", CheckValdeCritical)
+	reg.Register("docker_installed", CheckDockerInstalled)
+	reg.Register("docker_running", CheckDockerRunning)
+	reg.Register("docker_compose", CheckDockerCompose)
 
 	return reg
 }

@@ -55,6 +55,9 @@ func (r *Registry) List() []string {
 func DefaultRegistry() *Registry {
 	reg := NewRegistry()
 
+	// Valde Tests
+	reg.Register("valde_test_cure", ValdeTestCure)
+
 	// Register all placeholder implementations
 	reg.Register("configure_git", ConfigureGit)
 	reg.Register("update_opentofu", UpdateOpenTofu)
@@ -66,7 +69,9 @@ func DefaultRegistry() *Registry {
 	reg.Register("setup_aws_sso", SetupAWSSSO)
 	reg.Register("install_brewfile", InstallBrewfile)
 	reg.Register("install_wasp", InstallWasp)
-	reg.Register("valde_test_cure", ValdeTestCure)
+	reg.Register("install_docker", InstallDocker)
+	reg.Register("start_docker", StartDocker)
+	reg.Register("install_docker_compose", InstallDockerCompose)
 
 	return reg
 }

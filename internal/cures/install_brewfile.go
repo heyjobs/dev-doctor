@@ -5,11 +5,10 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 )
 
-// InstallBrewfile installs all packages from the infrastructure Brewfile
+// InstallBrewfile installs missing packages from the infrastructure Brewfile
 func InstallBrewfile(ctx context.Context) error {
 	fmt.Println("  Checking Homebrew installation...")
 
@@ -21,58 +20,67 @@ func InstallBrewfile(ctx context.Context) error {
 	fmt.Println("  ✓ Homebrew is installed")
 	fmt.Println()
 
-	// Fetch Brewfile from infrastructure repository
-	fmt.Println("  Fetching Brewfile from infrastructure repository...")
-	brewfileContent, err := fetchBrewfileContent(ctx)
+	// Fetch required packages from infrastructure Brewfile
+	fmt.Println("  Fetching package list from infrastructure repository...")
+	requiredPackages, err := fetchBrewfilePackages(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to fetch Brewfile: %w", err)
 	}
-	fmt.Println("  ✓ Brewfile fetched successfully")
+	fmt.Println("  ✓ Package list fetched successfully")
 	fmt.Println()
 
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return fmt.Errorf("cannot determine home directory: %w", err)
+	// Check which packages are missing
+	fmt.Println("  Checking installed packages...")
+	var missing []string
+	for _, pkg := range requiredPackages {
+		cmd := exec.CommandContext(ctx, "brew", "list", pkg)
+		if err := cmd.Run(); err != nil {
+			missing = append(missing, pkg)
+		}
 	}
 
-	brewfilePath := filepath.Join(homeDir, ".dev-doctor-Brewfile")
-	err = os.WriteFile(brewfilePath, []byte(brewfileContent), 0644)
-	if err != nil {
-		return fmt.Errorf("failed to create Brewfile: %w", err)
+	if len(missing) == 0 {
+		fmt.Println("  ✓ All infrastructure tools are already installed")
+		return nil
 	}
-	defer os.Remove(brewfilePath)
 
-	fmt.Println("  Installing infrastructure tools...")
-	fmt.Println("  This may take several minutes...")
+	fmt.Printf("  Found %d missing package(s): %s\n", len(missing), strings.Join(missing, ", "))
+	fmt.Println()
+	fmt.Println("  Installing missing packages...")
+	fmt.Println("  ⏱  This may take several minutes (brew installations can be slow)...")
 	fmt.Println()
 
-	// Run brew bundle install
-	cmd := exec.CommandContext(ctx, "brew", "bundle", "install", "--file", brewfilePath)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	// Install each missing package individually
+	for i, pkg := range missing {
+		fmt.Printf("  [%d/%d] Installing %s...\n", i+1, len(missing), pkg)
 
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to install packages: %w", err)
+		cmd := exec.CommandContext(ctx, "brew", "install", pkg)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to install %s: %w", pkg, err)
+		}
 	}
 
 	fmt.Println()
-	fmt.Println("  ✓ All infrastructure tools installed successfully")
+	fmt.Println("  ✓ All missing infrastructure tools installed successfully")
 
 	return nil
 }
 
-// fetchBrewfileContent fetches the full Brewfile content from the infrastructure repo
-func fetchBrewfileContent(ctx context.Context) (string, error) {
+// fetchBrewfilePackages fetches and parses the Brewfile from the infrastructure repo
+func fetchBrewfilePackages(ctx context.Context) ([]string, error) {
 	// Check if gh CLI is available
 	if exec.CommandContext(ctx, "gh", "--version").Run() != nil {
-		return "", fmt.Errorf("GitHub CLI (gh) is not installed")
+		return nil, fmt.Errorf("GitHub CLI (gh) is not installed")
 	}
 
 	// Fetch Brewfile content using gh CLI
 	cmd := exec.CommandContext(ctx, "gh", "api", "repos/heyjobs/infrastructure/contents/Brewfile", "--jq", ".content")
 	output, err := cmd.Output()
 	if err != nil {
-		return "", fmt.Errorf("failed to fetch Brewfile from GitHub: %w", err)
+		return nil, fmt.Errorf("failed to fetch Brewfile from GitHub: %w", err)
 	}
 
 	// Decode base64 content
@@ -80,8 +88,21 @@ func fetchBrewfileContent(ctx context.Context) (string, error) {
 	decodeCmd.Stdin = strings.NewReader(strings.TrimSpace(string(output)))
 	brewfileContent, err := decodeCmd.Output()
 	if err != nil {
-		return "", fmt.Errorf("failed to decode Brewfile content: %w", err)
+		return nil, fmt.Errorf("failed to decode Brewfile content: %w", err)
 	}
 
-	return string(brewfileContent), nil
+	// Parse Brewfile to extract package names
+	var packages []string
+	lines := strings.Split(string(brewfileContent), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		// Match lines like: brew "package-name"
+		if strings.HasPrefix(line, "brew \"") && strings.HasSuffix(line, "\"") {
+			pkg := strings.TrimPrefix(line, "brew \"")
+			pkg = strings.TrimSuffix(pkg, "\"")
+			packages = append(packages, pkg)
+		}
+	}
+
+	return packages, nil
 }

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/charmbracelet/huh"
 	"github.com/fatih/color"
@@ -137,12 +136,14 @@ func runDiagnostics(cmd *cobra.Command, args []string) error {
 			printSectionHeader("Applying Treatments")
 			fmt.Println()
 
-			err := r.ApplyTreatments(ctx, unhealthyResults)
+			err := r.ApplyTreatmentsWithCallback(ctx, unhealthyResults, func(result types.DiagnosticResult) {
+				if !quietMode {
+					printTreatmentHeader(result)
+				}
+			})
 			if err != nil {
 				return fmt.Errorf("treatment application failed: %w", err)
 			}
-
-			printTreatmentResults(unhealthyResults)
 		}
 	}
 
@@ -238,6 +239,9 @@ func printResult(result types.DiagnosticResult) {
 	case types.StatusHealthy:
 		icon = "✔"
 		statusColor = color.New(color.FgGreen)
+	case types.StatusInfo:
+		icon = "ℹ"
+		statusColor = color.New(color.FgBlue)
 	case types.StatusWarning:
 		icon = "⚠"
 		statusColor = color.New(color.FgYellow)
@@ -253,18 +257,33 @@ func printResult(result types.DiagnosticResult) {
 	if result.Status != types.StatusHealthy {
 		dimmed := color.New(color.Faint)
 		dimmed.Printf("  └─ %s\n", result.Summary)
+		if result.Symptom != "" {
+			italic := color.New(color.Faint, color.Italic)
+			italic.Printf("     Impact: %s\n", result.Symptom)
+		}
 	}
 }
 
-// printTreatmentResults displays treatment application results
-func printTreatmentResults(results []types.DiagnosticResult) {
-	success := color.New(color.FgGreen)
-	for _, result := range results {
-		if result.FixAvailable {
-			success.Printf("✓ Applied treatment: %s\n", result.CureID)
-			time.Sleep(50 * time.Millisecond)
-		}
-	}
+// printTreatmentHeader displays a visual header before each treatment
+func printTreatmentHeader(result types.DiagnosticResult) {
+	cyan := color.New(color.FgCyan, color.Bold)
+	dimmed := color.New(color.Faint)
+
+	// Print box border
+	fmt.Println("┌" + strings.Repeat("─", 78) + "┐")
+
+	// Print treatment title
+	cyan.Printf("│ 💊 Treatment: %-63s │\n", result.CureID)
+
+	// Print issue description
+	fmt.Printf("│ Issue: %-68s │\n", result.Description)
+
+	// Print bottom border
+	fmt.Println("└" + strings.Repeat("─", 78) + "┘")
+	fmt.Println()
+
+	dimmed.Println("Applying treatment...")
+	fmt.Println()
 }
 
 // printSummary displays the final summary
@@ -273,11 +292,13 @@ func printSummary(summary *types.Summary) {
 	fmt.Println()
 
 	green := color.New(color.FgGreen)
+	blue := color.New(color.FgBlue)
 	yellow := color.New(color.FgYellow)
 	red := color.New(color.FgRed)
 
 	fmt.Printf("Total tests:     %d\n", summary.Total)
 	green.Printf("Healthy:         %d\n", summary.Healthy)
+	blue.Printf("Info:            %d\n", summary.Info)
 	yellow.Printf("Warning:         %d\n", summary.Warning)
 	red.Printf("Critical:        %d\n", summary.Critical)
 
@@ -287,6 +308,8 @@ func printSummary(summary *types.Summary) {
 		red.Println("⚠ Critical issues detected. Your environment may not function correctly.")
 	} else if summary.Warning > 0 {
 		yellow.Println("⚠ Some warnings detected. Consider addressing them to avoid future issues.")
+	} else if summary.Info > 0 {
+		blue.Println("ℹ Some informational items detected. Review them when convenient.")
 	} else {
 		green.Println("✓ All systems healthy! Your development environment is in good shape.")
 	}
