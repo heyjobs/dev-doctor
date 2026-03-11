@@ -1,8 +1,10 @@
 ---
-description: Run dev-doctor diagnostics and intelligently fix issues
+description: Manually run dev-doctor diagnostics and intelligently fix issues
 ---
 
-You are helping the user run dev-doctor diagnostics and fix development environment issues.
+**Note**: This is for MANUAL/INTERACTIVE use. In production, dev-doctor spawns Claude automatically when cures fail (see CLAUDE.md for the automatic workflow).
+
+You are helping the user manually run dev-doctor diagnostics and fix development environment issues.
 
 ## Your Task
 
