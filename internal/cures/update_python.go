@@ -44,16 +44,21 @@ func UpdatePython(ctx context.Context) error {
 	}
 	fmt.Println("  ✓ Python version set as global default")
 
-	// Step 5: Check for PYENV_VERSION override
+	// Step 5: Unset PYENV_VERSION override so the new version is active
 	if envVersion := os.Getenv("PYENV_VERSION"); envVersion != "" && envVersion != latestVersion {
 		fmt.Println()
-		fmt.Println("  ⚠ WARNING: PYENV_VERSION environment variable is set to", envVersion)
-		fmt.Println("  This will override the global setting in your current shell.")
-		fmt.Println()
-		fmt.Println("  To use Python", latestVersion, "immediately, run:")
-		fmt.Println("    unset PYENV_VERSION")
-		fmt.Println()
-		fmt.Println("  Or start a new shell session.")
+		fmt.Println("  ℹ Detected PYENV_VERSION override (", envVersion, "), unsetting it...")
+		os.Unsetenv("PYENV_VERSION")
+		fmt.Println("  ✓ Environment variable cleared")
+	}
+
+	// Step 6: Rehash pyenv shims to ensure the new version is active
+	fmt.Println("  Refreshing pyenv environment...")
+	if err := pyenvRehash(ctx); err != nil {
+		// Non-fatal - warn but continue
+		fmt.Println("  ⚠ Warning: failed to rehash pyenv:", err)
+	} else {
+		fmt.Println("  ✓ Python", latestVersion, "is now active")
 	}
 
 	return nil
@@ -147,5 +152,11 @@ func setPyenvGlobal(ctx context.Context, version string) error {
 	cmd := exec.CommandContext(ctx, "pyenv", "global", version)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}
+
+// pyenvRehash refreshes pyenv shims
+func pyenvRehash(ctx context.Context) error {
+	cmd := exec.CommandContext(ctx, "pyenv", "rehash")
 	return cmd.Run()
 }

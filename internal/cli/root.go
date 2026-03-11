@@ -36,7 +36,7 @@ misconfigured services, and more.`,
 
 	cmd.Flags().StringVarP(&configPath, "config", "c", "", "Path to diagnostics configuration file")
 	cmd.Flags().BoolVarP(&quietMode, "quiet", "q", false, "Suppress progress messages")
-	cmd.Flags().StringVarP(&modeFlag, "mode", "m", "", "Consultation mode: 'diagnosis' or 'treatment' (skips interactive prompt)")
+	cmd.Flags().StringVarP(&modeFlag, "mode", "m", "", "Consultation mode: 'diagnosis' or 'treatment' (treatment spawns Claude if cures fail)")
 	cmd.Flags().StringVarP(&profileFlag, "profile", "p", "", "Profile to run: 'basic', 'infrastructure', or 'data' (skips interactive prompt)")
 
 	return cmd
@@ -112,38 +112,56 @@ func runDiagnostics(cmd *cobra.Command, args []string) error {
 		fmt.Println()
 	}
 
-	if !quietMode {
-		printSectionHeader("Running Diagnostic Chart")
-		fmt.Println()
-	}
-
-	// Create runner and execute diagnostics with real-time output
+	// Create runner
 	r := runner.NewRunner(cfg)
-	summary, err := r.RunDiagnosticsWithCallback(ctx, func(result types.DiagnosticResult) {
-		if !quietMode {
-			printResult(result)
-		}
-	})
-	if err != nil {
-		return fmt.Errorf("diagnostic execution failed: %w", err)
-	}
+	var summary *types.Summary
 
-	// Apply treatments if requested
+	// Handle different modes
 	if mode == types.ModeDiagnosisAndTreatment {
-		unhealthyResults := getUnhealthyResults(summary.Results)
-		if len(unhealthyResults) > 0 {
+		// Treatment mode: show diagnostic chart first, then apply cures with Claude help
+		if !quietMode {
+			printSectionHeader("Running Diagnostic Chart")
 			fmt.Println()
-			printSectionHeader("Applying Treatments")
-			fmt.Println()
+		}
 
-			err := r.ApplyTreatmentsWithCallback(ctx, unhealthyResults, func(result types.DiagnosticResult) {
+		treatmentHeaderShown := false
+		summary, err = r.RunWithClaudeAssist(ctx,
+			// Diagnostic callback - show results as they complete
+			func(result types.DiagnosticResult) {
 				if !quietMode {
+					printResult(result)
+				}
+			},
+			// Treatment callback - show treatment headers
+			func(result types.DiagnosticResult) {
+				if !quietMode {
+					if !treatmentHeaderShown {
+						fmt.Println()
+						printSectionHeader("Applying Treatments")
+						fmt.Println()
+						treatmentHeaderShown = true
+					}
 					printTreatmentHeader(result)
 				}
-			})
-			if err != nil {
-				return fmt.Errorf("treatment application failed: %w", err)
+			},
+		)
+		if err != nil {
+			return fmt.Errorf("treatment execution failed: %w", err)
+		}
+	} else {
+		// Diagnosis-only mode: just check without fixing
+		if !quietMode {
+			printSectionHeader("Running Diagnostic Chart")
+			fmt.Println()
+		}
+
+		summary, err = r.RunDiagnosticsWithCallback(ctx, func(result types.DiagnosticResult) {
+			if !quietMode {
+				printResult(result)
 			}
+		})
+		if err != nil {
+			return fmt.Errorf("diagnostic execution failed: %w", err)
 		}
 	}
 
@@ -202,7 +220,7 @@ func promptConsultationMode() (types.ConsultationMode, error) {
 				Description("Choose how you want dev-doctor to operate").
 				Options(
 					huh.NewOption("Diagnosis only - identify issues without fixing", "diagnosis_only"),
-					huh.NewOption("Diagnosis + treatments - identify and fix issues automatically", "diagnosis_and_treatment"),
+					huh.NewOption("Treatment - fix issues automatically (spawns Claude if automated cures fail)", "diagnosis_and_treatment"),
 				).
 				Value(&mode),
 		),

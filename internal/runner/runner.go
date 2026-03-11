@@ -1,8 +1,12 @@
 package runner
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"os"
+	"os/exec"
 	"time"
 
 	"github.com/yourusername/dev-doctor/internal/cures"
@@ -198,4 +202,193 @@ func (r *Runner) SetDiagnosticTimeout(timeout time.Duration) {
 // SetCureTimeout configures the timeout for cure operations
 func (r *Runner) SetCureTimeout(timeout time.Duration) {
 	r.cureTimeout = timeout
+}
+
+// RunWithClaudeAssist runs diagnostics first (showing chart), then applies cures with Claude assistance
+func (r *Runner) RunWithClaudeAssist(ctx context.Context, diagnosticCallback ResultCallback, treatmentCallback TreatmentCallback) (*types.Summary, error) {
+	// Phase 1: Run all diagnostics and show chart
+	results := make([]types.DiagnosticResult, 0, len(r.config.Tests))
+
+	for _, test := range r.config.Tests {
+		result, err := r.runSingleDiagnostic(ctx, test)
+		if err != nil {
+			result = types.DiagnosticResult{
+				TestID:      test.Test,
+				Description: test.Description,
+				Status:      types.StatusCritical,
+				Summary:     fmt.Sprintf("Test execution failed: %v", err),
+				Symptom:     test.Symptom,
+				CureID:      test.Cure,
+				FixAvailable: false,
+				Severity:    test.Severity,
+			}
+		}
+		results = append(results, result)
+
+		// Show diagnostic result immediately
+		if diagnosticCallback != nil {
+			diagnosticCallback(result)
+		}
+	}
+
+	// Phase 2: Apply cures to failed diagnostics with Claude assistance
+	for i, result := range results {
+		test := r.config.Tests[i]
+
+		// Skip healthy results
+		if result.Status == types.StatusHealthy {
+			continue
+		}
+
+		// Skip if no cure available
+		if !result.FixAvailable || result.CureID == "" {
+			continue
+		}
+
+		// Show treatment header
+		if treatmentCallback != nil {
+			treatmentCallback(result)
+		}
+
+		// Try automated cure
+		fmt.Printf("💊 Applying cure: %s\n", result.CureID)
+		fmt.Println()
+
+		cureOutput := &bytes.Buffer{}
+		cureErr := r.applyCureWithOutput(ctx, result.CureID, cureOutput)
+
+		if cureErr == nil {
+			// Verify cure worked
+			verifyResult, err := r.runSingleDiagnostic(ctx, test)
+			if err == nil && verifyResult.Status == types.StatusHealthy {
+				fmt.Println()
+				fmt.Println("  ✓ Cure succeeded!")
+				results[i] = verifyResult
+				continue
+			}
+		}
+
+		// Cure failed - spawn Claude
+		fmt.Println()
+		fmt.Println("  ✖ Automated cure failed")
+		fmt.Println("  🤖 Spawning Claude to fix this issue...")
+		fmt.Println()
+
+		claudeErr := r.spawnClaude(ctx, test, result, cureOutput.String())
+		if claudeErr != nil {
+			fmt.Printf("  ✖ Failed to spawn Claude: %v\n", claudeErr)
+			fmt.Println()
+			continue
+		}
+
+		// Re-run diagnostic after Claude fixes it
+		maxAttempts := 3
+		for attempt := 1; attempt <= maxAttempts; attempt++ {
+			fmt.Printf("\n🔍 Verifying fix (attempt %d/%d)...\n", attempt, maxAttempts)
+			verifyResult, err := r.runSingleDiagnostic(ctx, test)
+			if err == nil && verifyResult.Status == types.StatusHealthy {
+				fmt.Println("  ✓ Issue resolved!")
+				fmt.Println()
+				results[i] = verifyResult
+				break
+			}
+
+			if attempt < maxAttempts {
+				fmt.Println("  ✖ Still failing, spawning Claude again...")
+				fmt.Println()
+				claudeErr := r.spawnClaude(ctx, test, result, cureOutput.String())
+				if claudeErr != nil {
+					fmt.Printf("  ✖ Failed to spawn Claude: %v\n", claudeErr)
+					fmt.Println()
+					break
+				}
+			} else {
+				fmt.Println("  ✖ Max attempts reached, moving to next diagnostic")
+				fmt.Println()
+			}
+		}
+	}
+
+	return r.buildSummary(results), nil
+}
+
+// applyCureWithOutput runs a cure and captures its output while showing it to the user
+func (r *Runner) applyCureWithOutput(ctx context.Context, cureID string, output *bytes.Buffer) error {
+	cureFunc, err := r.cureRegistry.Get(cureID)
+	if err != nil {
+		return fmt.Errorf("cure not found: %w", err)
+	}
+
+	// Redirect stdout to both the terminal AND our buffer
+	oldStdout := os.Stdout
+	multiWriter := io.MultiWriter(oldStdout, output)
+
+	pr, pw, _ := os.Pipe()
+	os.Stdout = pw
+
+	// Copy from pipe to both destinations in a goroutine
+	done := make(chan struct{})
+	go func() {
+		io.Copy(multiWriter, pr)
+		close(done)
+	}()
+
+	cureCtx, cancel := context.WithTimeout(ctx, r.cureTimeout)
+	defer cancel()
+
+	cureErr := cureFunc(cureCtx)
+
+	// Restore stdout and wait for copy to complete
+	pw.Close()
+	<-done
+	os.Stdout = oldStdout
+
+	return cureErr
+}
+
+// spawnClaude spawns a Claude session with context about the failure
+func (r *Runner) spawnClaude(ctx context.Context, test types.DiagnosticTest, result types.DiagnosticResult, cureOutput string) error {
+	// Create context message for Claude
+	contextMsg := fmt.Sprintf(`dev-doctor failed to fix this issue automatically. Please help fix it.
+
+## Diagnostic Information
+
+**Test**: %s
+**Description**: %s
+**Status**: %s [%s]
+**Symptom**: %s
+
+## Automated Cure Attempted
+
+**Cure ID**: %s
+**Cure Output**:
+%s
+
+## Your Task
+
+The automated cure failed. Please:
+1. Analyze what went wrong
+2. Fix the issue using alternative methods
+3. Verify the fix works
+
+When you're done, dev-doctor will re-run the diagnostic to verify.
+`, test.Test, test.Description, result.Status, result.Severity, test.Symptom, result.CureID, cureOutput)
+
+	// Check if claude CLI is available
+	if _, err := exec.LookPath("claude"); err != nil {
+		fmt.Println("\n⚠ Claude CLI not found. Please install it to enable automatic fixing:")
+		fmt.Println("  https://docs.claude.com/claude-code")
+		fmt.Println("\nManual fix required:")
+		fmt.Println(contextMsg)
+		return fmt.Errorf("claude CLI not available")
+	}
+
+	// Spawn Claude with the context message in print mode (non-interactive, auto-exits)
+	// Use --dangerously-skip-permissions since we're fixing system-level issues
+	cmd := exec.CommandContext(ctx, "claude", "--print", "--dangerously-skip-permissions", contextMsg)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	return cmd.Run()
 }
