@@ -51,7 +51,7 @@ func runDiagnostics(cmd *cobra.Command, args []string) error {
 		printWelcome()
 	}
 
-	// Load configuration
+	// Load configuration (uses embedded config by default, or custom path if --config flag is provided)
 	loader := config.NewLoader(configPath)
 	cfg, err := loader.Load()
 	if err != nil {
