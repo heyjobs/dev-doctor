@@ -67,7 +67,7 @@ tests:
     description: Verify docker-compose is installed
     diagnostic: docker_compose
     cure: install_docker_compose
-    severity: warning
+    severity: critical
     symptom: Cannot run multi-container Docker applications
     profiles:
       - infrastructure
