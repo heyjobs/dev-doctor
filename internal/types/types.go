@@ -59,7 +59,7 @@ type CureFunc func(ctx context.Context) error
 type ConsultationMode string
 
 const (
-	ModeDiagnosisOnly       ConsultationMode = "diagnosis_only"
+	ModeDiagnosisOnly         ConsultationMode = "diagnosis_only"
 	ModeDiagnosisAndTreatment ConsultationMode = "diagnosis_and_treatment"
 )
 
