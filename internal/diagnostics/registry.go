@@ -69,6 +69,7 @@ func DefaultRegistry() *Registry {
 	reg.Register("docker_installed", CheckDockerInstalled)
 	reg.Register("docker_running", CheckDockerRunning)
 	reg.Register("docker_compose", CheckDockerCompose)
+	reg.Register("claude_cli", CheckClaudeCLI)
 
 	return reg
 }
