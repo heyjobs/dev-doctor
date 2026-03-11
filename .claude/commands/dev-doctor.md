@@ -1,171 +1,171 @@
 ---
-description: Manually run dev-doctor diagnostics and intelligently fix issues
+description: Interactive dev-doctor diagnostics with Claude-assisted fixing
 ---
 
-**Note**: This is for MANUAL/INTERACTIVE use. In production, dev-doctor's treatment mode automatically spawns Claude when cures fail (see CLAUDE.md for details).
+You are helping the user run dev-doctor diagnostics and interactively fix specific issues they choose.
 
-You are helping the user manually run dev-doctor diagnostics and fix development environment issues.
-
-## Your Task
-
-Run dev-doctor in an intelligent, interactive way that goes beyond the automated cures when needed.
-
-## Step-by-Step Process
+## Workflow
 
 ### 1. Ask User for Profile
 
 Ask the user which profile they want to check:
-- **basic** - Core developer tools (Git, AWS, VPN)
-- **infrastructure** - Platform engineering tools (Docker, OpenTofu, Brewfile)
-- **data** - Data engineering tools (Python, Wasp)
+- **basic** - Core developer tools (Homebrew, AWS, VPN, Claude CLI)
+- **infrastructure** - Platform tools (Docker, docker-compose, OpenTofu) + basic
+- **data** - Data engineering tools (Python, Wasp) + basic
 
-### 2. Build dev-doctor
+### 2. Run Diagnostics
 
-Before running, build the latest version from the dev-doctor repository root:
+Run dev-doctor in diagnosis mode from the project directory:
 ```bash
-go build -o dev-doctor ./cmd/dev-doctor
+dev-doctor --profile <PROFILE> --mode diagnosis
 ```
 
-### 3. Run Diagnostics to Identify Issues
+Show the user the complete output with all diagnostic results.
 
-Run dev-doctor in diagnosis mode and **respond with the full output**:
-```bash
-./dev-doctor --profile <PROFILE> --mode diagnosis
-```
+### 3. Ask Which Issue to Fix
 
-Show the user the complete terminal output. Identify which diagnostics are WARNING or CRITICAL.
+Look at the diagnostics results and identify issues that are WARNING or CRITICAL (ignore INFO).
 
-### 4. Fix Issues One at a Time
+Ask the user: **"Which issue would you like me to help fix?"**
 
-**IMPORTANT:** Process diagnostic-cure pairs ONE AT A TIME, not all at once.
+Present the failing diagnostics as options for the user to choose from.
 
-For EACH failing diagnostic (WARNING or CRITICAL):
+### 4. Fix the Chosen Issue
 
-a. **Show the diagnostic result** - Tell user which issue you're fixing
+Once the user selects an issue:
 
-b. **Run only diagnostics to see current status:**
-```bash
-./dev-doctor --profile <PROFILE> --mode diagnosis
-```
-Show the relevant output for this specific diagnostic.
+a. **Try the automated cure first** (if available):
+   ```bash
+   dev-doctor --profile <PROFILE> --mode treatment
+   ```
+   This will run the automated cure for that issue.
 
-c. **Run treatment mode** (this will apply all available cures):
-```bash
-./dev-doctor --profile <PROFILE> --mode treatment
-```
-**Show the full terminal output** - user needs to see what the cure is doing.
+b. **Verify if it worked:**
+   ```bash
+   dev-doctor --profile <PROFILE> --mode diagnosis
+   ```
+   Check if the issue is now resolved.
 
-d. **Verify it worked** - Run diagnostics again:
-```bash
-./dev-doctor --profile <PROFILE> --mode diagnosis
-```
-Show the output and confirm if this specific diagnostic now passes.
+c. **If automated cure worked** ✓
+   - Confirm with user
+   - Ask if they want to fix another issue
 
-e. **If cure succeeded** ✓ - Move to next failing diagnostic
+d. **If automated cure failed** - Use intelligent problem-solving:
 
-f. **If cure failed** - Continue to step 4g
+   1. **Analyze the error:**
+      - Read error messages carefully
+      - Identify root cause (permissions, network, version incompatibility, etc.)
 
-g. **Intelligent problem-solving:**
-When a cure fails, you must go beyond the scripted cure:
+   2. **Check prerequisites:**
+      - Is Homebrew installed and working?
+      - Are there permission issues?
+      - Is the network accessible?
+      - Is the macOS version compatible?
 
-1. **Analyze the error:**
-   - Read error messages carefully
-   - Identify root cause (permissions, network, version incompatibility, etc.)
+   3. **Try alternative solutions:**
+      - Manual installation via DMG/PKG
+      - Different installation methods (brew vs direct download)
+      - Older/newer versions that might work
+      - Configuration fixes
 
-2. **Check prerequisites:**
-   - Is Homebrew installed and working?
-   - Are there permission issues?
-   - Is the network accessible?
-   - Is the macOS version compatible?
+   4. **Research if needed:**
+      - Use web search to find known issues
+      - Check official documentation
+      - Look for release notes about compatibility
 
-3. **Try alternative solutions:**
-   - Manual installation via DMG/PKG
-   - Different installation methods (brew vs direct download)
-   - Older/newer versions that might work
-   - Configuration fixes
+   5. **Execute the fix:**
+      - Try your alternative solution
+      - Verify it works with another diagnostic run
 
-4. **Research the issue:**
-   - Use web search to find known issues
-   - Check official documentation
-   - Look for release notes about compatibility
+   6. **Explain what you did:**
+      - Tell the user what the problem was
+      - Explain how you fixed it
+      - Document the solution
 
-5. **Execute the fix:**
-   - Try your alternative solution
-   - Verify it works with another diagnostic run
+e. **Ask about next issue:**
+   After fixing one issue, ask: "Would you like me to fix another issue?"
+   - If yes, show remaining issues and let them choose
+   - If no, summarize what was accomplished
 
-6. **Explain what you did:**
-   - Tell the user what the problem was
-   - Explain how you fixed it
-   - Make sure they understand the solution
+### 5. Key Points
 
-### 5. Final Summary
-
-After processing all failing diagnostics, provide:
-- Count of issues fixed automatically
-- Count of issues you had to solve manually
-- Remaining issues (if any)
-- Brief explanation of manual fixes applied
+- **User chooses which issue to fix** - Don't automatically fix all issues
+- **One issue at a time** - Focus on one problem, solve it completely
+- **Show all command output** - User needs to see what's happening
+- **Beyond automated cures** - When cures fail, use creative problem-solving
 
 ## Important Rules
 
-1. **Respond with terminal output** - User needs to see the actual program output from each diagnostic and cure run
-2. **One diagnostic at a time** - Process each failing diagnostic-cure pair separately, don't batch them
-3. **Fix environments, not code** - Don't suggest changes to dev-doctor's cure code. Cures work in most cases, but environments differ and sometimes need manual intervention.
-4. **Verify each fix** - Always re-run diagnostics after applying a cure
-5. **Don't give up** - If the automated cure fails, try alternative solutions
-6. **Be creative** - You have full system access, use it to solve problems
+1. **Show terminal output** - Display actual command output so user sees what's happening
+2. **User chooses** - Let user select which issue to fix, don't fix everything automatically
+3. **One at a time** - Fix one issue completely before moving to the next
+4. **Fix environments, not code** - Fix the user's machine, don't modify dev-doctor code
+5. **Verify each fix** - Always re-run diagnostics after attempting a fix
+6. **Be creative** - When automated cures fail, use alternative solutions
 
 ## Example Flow
 
 ```
-User: Run dev-doctor for infrastructure profile
+User: /dev-doctor
 
-You:
-1. Building dev-doctor...
-   ✓ Built successfully
+Claude: I'll help you run dev-doctor diagnostics and fix any issues.
 
-2. Running diagnostics...
-   Found 3 failing checks:
-   - Docker not installed [CRITICAL]
-   - Docker not running [INFO]
-   - docker-compose not installed [WARNING]
+Which profile would you like me to check?
+- basic (Homebrew, AWS, VPN, Claude CLI)
+- infrastructure (Docker, docker-compose, OpenTofu + basic)
+- data (Python, Wasp + basic)
 
-3. Fixing: Docker not installed
-   - Attempting automated cure (install_docker)...
-   - Homebrew installation failed (macOS 13 too old)
-   - Detected macOS 13.4 - need compatible Docker version
-   - Downloading Docker Desktop 4.43.0 for macOS 13...
-   - Installing from DMG...
-   ✓ Docker Desktop installed successfully
+User: infrastructure
 
-4. Re-running diagnostics...
-   ✓ Docker is now installed
-   - Next issue: Docker not running
+Claude: Running diagnostics for infrastructure profile...
 
-5. Fixing: Docker not running
-   - Cure shows instructions but doesn't auto-start
-   - Starting Docker Desktop automatically...
-   - Waiting for daemon to be ready...
-   ✓ Docker daemon is running
+[Shows output]
+✔ Verify Homebrew is installed                  [HEALTHY]
+✖ Verify Docker is installed                    [CRITICAL]
+  └─ Docker is not installed
+ℹ Verify Docker daemon is running               [INFO]
+⚠ Verify docker-compose is installed            [WARNING]
+  └─ docker-compose is not installed
 
-6. Re-running diagnostics...
-   ✓ All checks passing!
+I found 2 issues that need attention:
+1. Docker is not installed [CRITICAL]
+2. docker-compose is not installed [WARNING]
 
-Summary:
-- Fixed 3 issues (2 automatically, 1 with manual intervention)
-- All infrastructure checks now passing
-- Manual fix: Started Docker daemon automatically instead of just showing instructions
+Which issue would you like me to help fix?
+
+User: Docker
+
+Claude: I'll help fix the Docker installation issue.
+
+First, let me try the automated cure...
+[Runs: dev-doctor --profile infrastructure --mode treatment]
+[Shows output]
+
+The automated cure failed because your macOS version is too old.
+Let me fix this manually...
+
+[Downloads compatible Docker version]
+[Installs from DMG]
+
+✓ Docker Desktop installed successfully
+
+Let me verify it worked...
+[Runs: dev-doctor --profile infrastructure --mode diagnosis]
+
+✓ Docker is now installed and working!
+
+Would you like me to fix another issue? (You still have docker-compose not installed)
+
+User: Yes
+
+Claude: I'll fix the docker-compose issue...
+[Continues with next fix]
 ```
 
 ## Context
 
-Read the CLAUDE.md file for:
-- Project structure
-- How diagnostics and cures work
-- Status vs severity concepts
-- Best practices for cures
-
 Check `configs/diagnostics.yaml` to understand:
-- Which diagnostics map to which cures
+- Which diagnostics exist
+- Which cures are available
 - Severity levels
 - Profile groupings
