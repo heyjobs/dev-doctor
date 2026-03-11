@@ -254,6 +254,10 @@ func printResult(result types.DiagnosticResult) {
 	if result.Status != types.StatusHealthy {
 		dimmed := color.New(color.Faint)
 		dimmed.Printf("  └─ %s\n", result.Summary)
+		if result.Symptom != "" {
+			italic := color.New(color.Faint, color.Italic)
+			italic.Printf("     Impact: %s\n", result.Symptom)
+		}
 	}
 }
 
