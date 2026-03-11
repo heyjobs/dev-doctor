@@ -28,8 +28,7 @@ func InstallDocker(ctx context.Context) error {
 		fmt.Println()
 		fmt.Println("  ⚠ Homebrew is not installed")
 		fmt.Println()
-		fmt.Println("  Please install Docker Desktop manually:")
-		fmt.Println("  https://docs.docker.com/desktop/install/mac-install/")
+		printDockerManualInstallInstructions()
 		return nil
 	}
 
@@ -57,8 +56,7 @@ func InstallDocker(ctx context.Context) error {
 		fmt.Println()
 		fmt.Println("  ✖ Failed to install Docker via Homebrew")
 		fmt.Println()
-		fmt.Println("  Please install Docker Desktop manually:")
-		fmt.Println("  https://docs.docker.com/desktop/install/mac-install/")
+		printDockerManualInstallInstructions()
 		return nil
 	}
 
@@ -68,4 +66,34 @@ func InstallDocker(ctx context.Context) error {
 	fmt.Println("  ⚠ Please launch Docker Desktop from Applications to complete setup")
 
 	return nil
+}
+
+// printDockerManualInstallInstructions shows OS-specific Docker installation guidance
+func printDockerManualInstallInstructions() {
+	// Get macOS version
+	cmd := exec.Command("sw_vers", "-productVersion")
+	output, err := cmd.Output()
+	macOSVersion := ""
+	if err == nil {
+		macOSVersion = string(output)
+	}
+
+	fmt.Println("  Please install Docker Desktop manually:")
+	fmt.Println()
+
+	// Check if running older macOS
+	if macOSVersion != "" && (macOSVersion[0] == '1' && macOSVersion[1] <= '3') {
+		fmt.Println("  ⚠ You are running macOS 13 or older")
+		fmt.Println("  Latest Docker Desktop requires macOS 14 (Sonoma) or later")
+		fmt.Println()
+		fmt.Println("  Options:")
+		fmt.Println("  1. Upgrade to macOS 14+ and install latest Docker Desktop:")
+		fmt.Println("     https://docs.docker.com/desktop/install/mac-install/")
+		fmt.Println()
+		fmt.Println("  2. Install older Docker Desktop version compatible with your macOS:")
+		fmt.Println("     https://docs.docker.com/desktop/release-notes/")
+		fmt.Println("     (Look for releases supporting macOS 13)")
+	} else {
+		fmt.Println("  https://docs.docker.com/desktop/install/mac-install/")
+	}
 }
