@@ -137,12 +137,14 @@ func runDiagnostics(cmd *cobra.Command, args []string) error {
 			printSectionHeader("Applying Treatments")
 			fmt.Println()
 
-			err := r.ApplyTreatments(ctx, unhealthyResults)
+			err := r.ApplyTreatmentsWithCallback(ctx, unhealthyResults, func(result types.DiagnosticResult) {
+				if !quietMode {
+					printTreatmentHeader(result)
+				}
+			})
 			if err != nil {
 				return fmt.Errorf("treatment application failed: %w", err)
 			}
-
-			printTreatmentResults(unhealthyResults)
 		}
 	}
 
@@ -256,15 +258,26 @@ func printResult(result types.DiagnosticResult) {
 	}
 }
 
-// printTreatmentResults displays treatment application results
-func printTreatmentResults(results []types.DiagnosticResult) {
-	success := color.New(color.FgGreen)
-	for _, result := range results {
-		if result.FixAvailable {
-			success.Printf("✓ Applied treatment: %s\n", result.CureID)
-			time.Sleep(50 * time.Millisecond)
-		}
-	}
+// printTreatmentHeader displays a visual header before each treatment
+func printTreatmentHeader(result types.DiagnosticResult) {
+	cyan := color.New(color.FgCyan, color.Bold)
+	dimmed := color.New(color.Faint)
+
+	// Print box border
+	fmt.Println("┌" + strings.Repeat("─", 78) + "┐")
+
+	// Print treatment title
+	cyan.Printf("│ 💊 Treatment: %-63s │\n", result.CureID)
+
+	// Print issue description
+	fmt.Printf("│ Issue: %-68s │\n", result.Description)
+
+	// Print bottom border
+	fmt.Println("└" + strings.Repeat("─", 78) + "┘")
+	fmt.Println()
+
+	dimmed.Println("Applying treatment...")
+	fmt.Println()
 }
 
 // printSummary displays the final summary

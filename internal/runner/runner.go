@@ -105,8 +105,16 @@ func (r *Runner) runSingleDiagnostic(ctx context.Context, test types.DiagnosticT
 	}, nil
 }
 
+// TreatmentCallback is called before each treatment is applied
+type TreatmentCallback func(result types.DiagnosticResult)
+
 // ApplyTreatments applies cures to failed diagnostics
 func (r *Runner) ApplyTreatments(ctx context.Context, results []types.DiagnosticResult) error {
+	return r.ApplyTreatmentsWithCallback(ctx, results, nil)
+}
+
+// ApplyTreatmentsWithCallback applies cures and calls callback before each treatment
+func (r *Runner) ApplyTreatmentsWithCallback(ctx context.Context, results []types.DiagnosticResult, callback TreatmentCallback) error {
 	for _, result := range results {
 		// Only apply treatments to non-healthy tests with available fixes
 		if result.Status == types.StatusHealthy || !result.FixAvailable {
@@ -119,6 +127,11 @@ func (r *Runner) ApplyTreatments(ctx context.Context, results []types.Diagnostic
 			return fmt.Errorf("cure not found for %s: %w", result.TestID, err)
 		}
 
+		// Call callback before applying treatment
+		if callback != nil {
+			callback(result)
+		}
+
 		// Create context with timeout (longer for cures like Python installation)
 		cureCtx, cancel := context.WithTimeout(ctx, r.cureTimeout)
 		defer cancel()
@@ -127,6 +140,9 @@ func (r *Runner) ApplyTreatments(ctx context.Context, results []types.Diagnostic
 		if err := cureFunc(cureCtx); err != nil {
 			return fmt.Errorf("failed to apply cure for %s: %w", result.TestID, err)
 		}
+
+		// Add visual separator after treatment
+		fmt.Println()
 	}
 
 	return nil
