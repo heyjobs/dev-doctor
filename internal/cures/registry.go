@@ -61,9 +61,6 @@ func DefaultRegistry() *Registry {
 	reg.Register("setup_dbt_secret_config", SetupDbtSecretConfig)
 	reg.Register("run_dbt_deps", RunDbtDeps)
 
-	// Valde Tests
-	reg.Register("valde_test_cure", ValdeTestCure)
-
 	// Register all placeholder implementations
 	reg.Register("configure_git", ConfigureGit)
 	reg.Register("update_opentofu", UpdateOpenTofu)

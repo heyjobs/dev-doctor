@@ -162,33 +162,6 @@ tests:
     profiles:
       - dbt_analytics
 
-  - test: valde_test
-    description: Valde test - always healthy
-    diagnostic: valde_test
-    cure: valde_test_cure
-    severity: info
-    symptom: Diagnostic system sanity check failed
-    profiles:
-      - basic
-
-  - test: valde_warning
-    description: Valde test - always warning
-    diagnostic: valde_warning
-    cure: valde_test_cure
-    severity: warning
-    symptom: Valde warning test symptom
-    profiles:
-      - basic
-
-  - test: valde_critical
-    description: Valde test - always critical
-    diagnostic: valde_critical
-    cure: valde_test_cure
-    severity: critical
-    symptom: Valde critical test symptom
-    profiles:
-      - basic
-
   - test: check_claude
     description: Verify Claude CLI is installed
     diagnostic: claude_cli
@@ -197,4 +170,3 @@ tests:
     symptom: Cannot use Claude CLI commands
     profiles:
       - basic
-

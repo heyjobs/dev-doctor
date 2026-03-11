@@ -62,11 +62,6 @@ func DefaultRegistry() *Registry {
 	reg.Register("dbt_secret_config", CheckDbtSecretConfig)
 	reg.Register("dbt_packages", CheckDbtPackages)
 
-	// Valde tests
-	reg.Register("valde_test", CheckValdeTest)
-	reg.Register("valde_warning", CheckValdeWarning)
-	reg.Register("valde_critical", CheckValdeCritical)
-
 	// Register all mock implementations
 	reg.Register("git_config", CheckGitConfiguration)
 	reg.Register("opentofu_version", CheckOpenTofuVersion)
