@@ -45,6 +45,33 @@ tests:
     profiles:
       - infrastructure
 
+  - test: check_docker_installed
+    description: Verify Docker is installed
+    diagnostic: docker_installed
+    cure: ""
+    severity: critical
+    symptom: Cannot run Docker containers
+    profiles:
+      - infrastructure
+
+  - test: check_docker_running
+    description: Verify Docker daemon is running
+    diagnostic: docker_running
+    cure: ""
+    severity: critical
+    symptom: Docker commands fail because daemon is not running
+    profiles:
+      - infrastructure
+
+  - test: check_docker_compose
+    description: Verify docker-compose is installed
+    diagnostic: docker_compose
+    cure: ""
+    severity: warning
+    symptom: Cannot run multi-container Docker applications
+    profiles:
+      - infrastructure
+
   - test: check_opentofu_version
     description: Verify OpenTofu version meets requirements
     diagnostic: opentofu_version

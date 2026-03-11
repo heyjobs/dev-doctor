@@ -66,6 +66,9 @@ func DefaultRegistry() *Registry {
 	reg.Register("brewfile", CheckBrewfile)
 	reg.Register("vpn_connection", CheckVPNConnection)
 	reg.Register("wasp_version", CheckWaspVersion)
+	reg.Register("docker_installed", CheckDockerInstalled)
+	reg.Register("docker_running", CheckDockerRunning)
+	reg.Register("docker_compose", CheckDockerCompose)
 
 	return reg
 }
