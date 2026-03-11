@@ -37,7 +37,7 @@ misconfigured services, and more.`,
 	cmd.Flags().StringVarP(&configPath, "config", "c", "", "Path to diagnostics configuration file")
 	cmd.Flags().BoolVarP(&quietMode, "quiet", "q", false, "Suppress progress messages")
 	cmd.Flags().StringVarP(&modeFlag, "mode", "m", "", "Consultation mode: 'diagnosis' or 'treatment' (treatment spawns Claude if cures fail)")
-	cmd.Flags().StringVarP(&profileFlag, "profile", "p", "", "Profile to run: 'basic', 'infrastructure', or 'data' (skips interactive prompt)")
+	cmd.Flags().StringVarP(&profileFlag, "profile", "p", "", "Profile to run: 'basic', 'infrastructure', 'data', or 'dbt_analytics' (skips interactive prompt)")
 
 	return cmd
 }
