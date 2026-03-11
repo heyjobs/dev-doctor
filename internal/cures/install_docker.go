@@ -9,20 +9,38 @@ import (
 
 // InstallDocker installs Docker Desktop via Homebrew
 func InstallDocker(ctx context.Context) error {
+	fmt.Println("  Checking for Docker Desktop...")
+
+	// Check if Docker Desktop app already exists
+	if _, err := os.Stat("/Applications/Docker.app"); err == nil {
+		fmt.Println("  ✓ Docker Desktop is already installed in Applications")
+		fmt.Println()
+		fmt.Println("  ℹ If docker commands are not working, try:")
+		fmt.Println("  1. Launch Docker Desktop from Applications")
+		fmt.Println("  2. Restart your terminal")
+		return nil
+	}
+
 	fmt.Println("  Checking Homebrew installation...")
 
 	// Check if brew is installed
 	if exec.CommandContext(ctx, "brew", "--version").Run() != nil {
-		return fmt.Errorf("Homebrew is not installed. Install from https://brew.sh")
+		fmt.Println()
+		fmt.Println("  ⚠ Homebrew is not installed")
+		fmt.Println()
+		fmt.Println("  Please install Docker Desktop manually:")
+		fmt.Println("  https://docs.docker.com/desktop/install/mac-install/")
+		return nil
 	}
 
 	fmt.Println("  ✓ Homebrew is installed")
 	fmt.Println()
 
-	// Check if Docker is already installed
+	// Check if Docker is already installed via brew
 	cmd := exec.CommandContext(ctx, "brew", "list", "--cask", "docker")
 	if err := cmd.Run(); err == nil {
-		fmt.Println("  ✓ Docker is already installed via Homebrew")
+		fmt.Println("  ✓ Docker cask is already installed via Homebrew")
+		fmt.Println("  ℹ Docker Desktop app should be in /Applications/Docker.app")
 		return nil
 	}
 
@@ -36,7 +54,12 @@ func InstallDocker(ctx context.Context) error {
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to install Docker: %w", err)
+		fmt.Println()
+		fmt.Println("  ✖ Failed to install Docker via Homebrew")
+		fmt.Println()
+		fmt.Println("  Please install Docker Desktop manually:")
+		fmt.Println("  https://docs.docker.com/desktop/install/mac-install/")
+		return nil
 	}
 
 	fmt.Println()
