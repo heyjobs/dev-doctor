@@ -24,32 +24,46 @@ Before running, build the latest version from the dev-doctor repository root:
 go build -o dev-doctor ./cmd/dev-doctor
 ```
 
-### 3. Run Diagnostics Only First
+### 3. Run Diagnostics to Identify Issues
 
-Run dev-doctor in diagnosis mode to see all issues:
+Run dev-doctor in diagnosis mode and **show the full output**:
 ```bash
 ./dev-doctor --profile <PROFILE> --mode diagnosis
 ```
 
-Analyze the output and identify which diagnostics failed.
+Show the user the complete terminal output. Identify which diagnostics are WARNING or CRITICAL.
 
-### 4. Apply Cures Systematically
+### 4. Fix Issues One at a Time
 
-For EACH failing diagnostic (in order):
+**IMPORTANT:** Process diagnostic-cure pairs ONE AT A TIME, not all at once.
 
-a. **Run the cure:**
+For EACH failing diagnostic (WARNING or CRITICAL):
+
+a. **Show the diagnostic result** - Tell user which issue you're fixing
+
+b. **Run only diagnostics to see current status:**
+```bash
+./dev-doctor --profile <PROFILE> --mode diagnosis
+```
+Show the relevant output for this specific diagnostic.
+
+c. **Run treatment mode** (this will apply all available cures):
 ```bash
 ./dev-doctor --profile <PROFILE> --mode treatment
 ```
+**Show the full terminal output** - user needs to see what the cure is doing.
 
-Note: This will run ALL cures, but you should monitor each one.
+d. **Verify it worked** - Run diagnostics again:
+```bash
+./dev-doctor --profile <PROFILE> --mode diagnosis
+```
+Show the output and confirm if this specific diagnostic now passes.
 
-b. **Check if cure succeeded:**
-- Run diagnosis again to verify the specific check now passes
-- If it passes: ✓ Move to next failing diagnostic
-- If it fails: Continue to step c
+e. **If cure succeeded** ✓ - Move to next failing diagnostic
 
-c. **Intelligent problem-solving:**
+f. **If cure failed** - Continue to step 4g
+
+g. **Intelligent problem-solving:**
 When a cure fails, you must go beyond the scripted cure:
 
 1. **Analyze the error:**
@@ -92,12 +106,12 @@ After processing all failing diagnostics, provide:
 
 ## Important Rules
 
-1. **Fix environments, not code** - Don't suggest changes to dev-doctor's cure code. Cures work in most cases, but environments differ and sometimes need manual intervention.
-2. **One diagnostic at a time** - Don't try to fix everything at once
-3. **Verify each fix** - Always re-run diagnostics after applying a cure
-4. **Don't give up** - If the automated cure fails, try alternative solutions
-5. **Be creative** - You have full system access, use it to solve problems
-6. **User communication** - Keep user informed of progress and what you're trying
+1. **Show all terminal output** - User needs to see the actual program output from each diagnostic and cure run
+2. **One diagnostic at a time** - Process each failing diagnostic-cure pair separately, don't batch them
+3. **Fix environments, not code** - Don't suggest changes to dev-doctor's cure code. Cures work in most cases, but environments differ and sometimes need manual intervention.
+4. **Verify each fix** - Always re-run diagnostics after applying a cure
+5. **Don't give up** - If the automated cure fails, try alternative solutions
+6. **Be creative** - You have full system access, use it to solve problems
 
 ## Example Flow
 

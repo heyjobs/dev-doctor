@@ -40,23 +40,28 @@ The skill should:
    go build -o dev-doctor ./cmd/dev-doctor
    ```
 
-3. **Run diagnostics** - Check what's broken:
+3. **Run diagnostics** - Check what's broken and **show the full terminal output**:
    ```bash
    ./dev-doctor --profile <PROFILE> --mode diagnosis
    ```
 
-4. **Fix issues systematically** - For EACH warning or critical issue:
+4. **Fix issues one at a time** - For EACH warning or critical issue:
 
-   a. **Run the cure:**
+   a. **Show which issue you're fixing**
+
+   b. **Run treatment mode** and **show full terminal output**:
    ```bash
    ./dev-doctor --profile <PROFILE> --mode treatment
    ```
 
-   b. **Verify it worked** - Run diagnostics again to check
+   c. **Verify it worked** - Run diagnostics again and show output:
+   ```bash
+   ./dev-doctor --profile <PROFILE> --mode diagnosis
+   ```
 
-   c. **If cure succeeded** ✓ - Move to next issue
+   d. **If cure succeeded** ✓ - Move to next issue
 
-   d. **If cure failed** - You must solve it beyond the automated cure:
+   e. **If cure failed** - You must solve it beyond the automated cure:
       - Analyze the error message
       - Check prerequisites (Homebrew installed? Permissions? Network?)
       - Check OS compatibility (macOS version?)
@@ -69,15 +74,15 @@ The skill should:
 
 ### Important Rules
 
-- **Fix environments, not code** - Don't suggest changes to dev-doctor's cure code. The cures work for most cases, but sometimes environments differ and need manual intervention.
+- **Show all terminal output** - User needs to see the actual program output from each diagnostic and cure run
 
-- **One issue at a time** - Fix each diagnostic failure before moving to the next
+- **One issue at a time** - Process each diagnostic-cure pair separately, don't batch them
+
+- **Fix environments, not code** - Don't suggest changes to dev-doctor's cure code. The cures work for most cases, but sometimes environments differ and need manual intervention.
 
 - **Always verify** - Re-run diagnostics after each fix to confirm it worked
 
 - **Don't give up** - If the automated cure fails, figure out an alternative solution
-
-- **Keep user informed** - Explain what you're doing and why
 
 ### Example Flow
 
