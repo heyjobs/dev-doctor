@@ -54,14 +54,14 @@ tests:
   #   profiles:
   #     - basic
 
-  # - test: check_brewfile
-  #   description: Verify infrastructure tools from Brewfile are installed
-  #   diagnostic: brewfile
-  #   cure: install_brewfile
-  #   severity: warning
-  #   symptom: Infrastructure tools are missing
-  #   profiles:
-  #     - infrastructure
+  - test: check_brewfile
+    description: Verify infrastructure tools from Brewfile are installed
+    diagnostic: brewfile
+    cure: install_brewfile
+    severity: warning
+    symptom: Infrastructure tools are missing
+    profiles:
+      - infrastructure
 
   - test: check_docker_installed
     description: Verify Docker is installed
@@ -103,7 +103,7 @@ tests:
     description: Verify Python version is 3.10.x
     diagnostic: python_version
     cure: update_python
-    severity: warning
+    severity: critical
     symptom: Python scripts may fail or use incompatible features
     profiles:
       - data

@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
 // SetupDbtVenv creates the Python venv and installs dbt-redshift into it.
@@ -68,26 +69,80 @@ func InstallDbtRedshift(ctx context.Context) error {
 	return nil
 }
 
-// SetupDbtSecretConfig prints instructions to load dbt environment variables.
-// Sourcing a file into the parent shell cannot be done from a subprocess,
-// so the cure tells the user exactly what to run.
+// SetupDbtSecretConfig activates and verifies the dbt environment with AWS credentials.
+// It checks that venv, aws-vault profile, and secret_config.env all exist and work together.
 func SetupDbtSecretConfig(ctx context.Context) error {
-	fmt.Println("  dbt environment variables are not set in this shell session.")
-	fmt.Println("  They are loaded by sourcing secret_config.env, which is done by start_env.sh.")
+	fmt.Println("  Setting up dbt environment with AWS credentials...")
 	fmt.Println()
-	fmt.Println("  Run the following from the bi_analytics_dbt repo root:")
+
+	// 1. Verify venv exists
+	venvPath := filepath.Join("venv", "bin", "activate")
+	if _, err := os.Stat(venvPath); os.IsNotExist(err) {
+		return fmt.Errorf("venv not found - run the venv cure first")
+	}
+	fmt.Println("  ✓ venv exists")
+
+	// 2. Verify aws-vault profile exists
+	fmt.Println("  Checking aws-vault profile...")
+	checkCmd := exec.CommandContext(ctx, "aws-vault", "list")
+	output, err := checkCmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("aws-vault not working: %w", err)
+	}
+	if !strings.Contains(string(output), "data_platform_sso_staging") {
+		return fmt.Errorf("aws-vault profile 'data_platform_sso_staging' not found - configure it first")
+	}
+	fmt.Println("  ✓ aws-vault profile 'data_platform_sso_staging' exists")
+
+	// 3. Verify secret_config.env exists, or create it from template
+	secretConfigPath := "secret_config.env"
+	templatePath := "secret_config.env.template"
+
+	if _, err := os.Stat(secretConfigPath); os.IsNotExist(err) {
+		// Check if template exists
+		if _, err := os.Stat(templatePath); os.IsNotExist(err) {
+			return fmt.Errorf("secret_config.env not found and no template available")
+		}
+
+		// Copy template to secret_config.env
+		fmt.Println("  Creating secret_config.env from template...")
+		cmd := exec.CommandContext(ctx, "cp", templatePath, secretConfigPath)
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to copy template: %w", err)
+		}
+		fmt.Println("  ✓ secret_config.env created from template")
+		fmt.Println()
+		fmt.Println("  ⚠️  IMPORTANT: Edit secret_config.env and configure your credentials!")
+		fmt.Println()
+	} else {
+		fmt.Println("  ✓ secret_config.env exists")
+	}
+
+	// 4. Test the full environment activation
+	fmt.Println("  Testing environment activation with aws-vault...")
+	testCmd := exec.CommandContext(ctx, "aws-vault", "exec", "data_platform_sso_staging", "--",
+		"bash", "-c", "source secret_config.env && echo $DBT_HOST")
+	testOutput, err := testCmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to activate environment: %w", err)
+	}
+
+	dbHost := strings.TrimSpace(string(testOutput))
+	if dbHost == "" {
+		return fmt.Errorf("DBT_HOST not set in secret_config.env")
+	}
+	fmt.Printf("  ✓ Environment activated successfully (DBT_HOST=%s)\n", dbHost)
 	fmt.Println()
+	fmt.Println("  ℹ  To use dbt interactively, run:")
+	fmt.Println("      source venv/bin/activate")
+	fmt.Println("      aws-vault exec data_platform_sso_staging -- bash")
 	fmt.Println("      source secret_config.env")
-	fmt.Println()
-	fmt.Println("  Or run the full environment setup:")
-	fmt.Println()
-	fmt.Println("      source venv/bin/activate && source secret_config.env")
 
 	return nil
 }
 
 // RunDbtDeps runs `dbt deps` in the current directory (bi_analytics_dbt repo root),
-// sourcing secret_config.env so DBT_PROFILES_DIR and credentials are available.
+// using aws-vault to activate AWS credentials and sourcing secret_config.env.
 func RunDbtDeps(ctx context.Context) error {
 	// Use venv dbt binary directly so it works regardless of whether venv is active
 	dbtBin := "venv/bin/dbt"
@@ -95,8 +150,28 @@ func RunDbtDeps(ctx context.Context) error {
 		dbtBin = "dbt"
 	}
 
-	fmt.Println("  Running dbt deps...")
-	cmd := exec.CommandContext(ctx, "bash", "-c", fmt.Sprintf("source secret_config.env && %s deps", dbtBin))
+	// Ensure secret_config.env exists (copy from template if needed)
+	secretConfigPath := "secret_config.env"
+	templatePath := "secret_config.env.template"
+
+	if _, err := os.Stat(secretConfigPath); os.IsNotExist(err) {
+		if _, err := os.Stat(templatePath); os.IsNotExist(err) {
+			return fmt.Errorf("secret_config.env not found and no template available")
+		}
+
+		fmt.Println("  Creating secret_config.env from template...")
+		cpCmd := exec.CommandContext(ctx, "cp", templatePath, secretConfigPath)
+		if err := cpCmd.Run(); err != nil {
+			return fmt.Errorf("failed to copy template: %w", err)
+		}
+		fmt.Println("  ✓ secret_config.env created from template")
+		fmt.Println("  ⚠️  Remember to configure your credentials in secret_config.env")
+		fmt.Println()
+	}
+
+	fmt.Println("  Running dbt deps with AWS credentials (data_platform_sso_staging)...")
+	cmd := exec.CommandContext(ctx, "aws-vault", "exec", "data_platform_sso_staging", "--",
+		"bash", "-c", fmt.Sprintf("source secret_config.env && %s deps", dbtBin))
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {

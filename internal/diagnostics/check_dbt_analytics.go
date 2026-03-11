@@ -37,7 +37,14 @@ func CheckDbtAnalyticsVenvActive(ctx context.Context) (types.Status, string, err
 
 // CheckDbtInstalled verifies dbt is in PATH and the Redshift adapter is installed
 func CheckDbtInstalled(ctx context.Context) (types.Status, string, error) {
-	cmd := exec.CommandContext(ctx, "dbt", "--version")
+	// Use venv dbt binary directly
+	dbtBin := filepath.Join(dbtProjectDir(), "venv", "bin", "dbt")
+	if _, err := os.Stat(dbtBin); err != nil {
+		// Fall back to system dbt if venv doesn't exist
+		dbtBin = "dbt"
+	}
+
+	cmd := exec.CommandContext(ctx, dbtBin, "--version")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return types.StatusCritical, "dbt is not installed or not in PATH - run: pip install dbt-redshift", nil
