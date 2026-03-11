@@ -35,9 +35,8 @@ The skill should:
 
 1. **Ask for profile** - Which profile to check (basic/infrastructure/data)
 
-2. **Build dev-doctor** - Always build latest version first:
+2. **Build dev-doctor** - Always build latest version first from the dev-doctor repository root:
    ```bash
-   cd /Users/luka.borec/PycharmProjects/dev-doctor
    go build -o dev-doctor ./cmd/dev-doctor
    ```
 
@@ -124,9 +123,8 @@ You:
 Summary: Fixed 2 issues successfully
 ```
 
-## Key Locations
+## Key Files
 
-- Binary location: `/Users/luka.borec/PycharmProjects/dev-doctor/dev-doctor`
 - Config: `configs/diagnostics.yaml` - see which diagnostics map to which cures
-- Build command: `go build -o dev-doctor ./cmd/dev-doctor`
-- Run: `./dev-doctor --profile <PROFILE> --mode <diagnosis|treatment>`
+- Build command (from repo root): `go build -o dev-doctor ./cmd/dev-doctor`
+- Run (from repo root): `./dev-doctor --profile <PROFILE> --mode <diagnosis|treatment>`

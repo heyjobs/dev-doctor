@@ -19,9 +19,8 @@ Ask the user which profile they want to check:
 
 ### 2. Build dev-doctor
 
-Before running, build the latest version:
+Before running, build the latest version from the dev-doctor repository root:
 ```bash
-cd /Users/luka.borec/PycharmProjects/dev-doctor
 go build -o dev-doctor ./cmd/dev-doctor
 ```
 
