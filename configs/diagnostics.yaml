@@ -99,3 +99,12 @@ tests:
     profiles:
       - data
 
+  - test: check_claude
+    description: Verify Claude CLI is installed
+    diagnostic: claude_cli
+    cure: install_claude_cli
+    severity: warning
+    symptom: Cannot use Claude CLI commands
+    profiles:
+      - basic
+
