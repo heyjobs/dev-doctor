@@ -239,6 +239,9 @@ func printResult(result types.DiagnosticResult) {
 	case types.StatusHealthy:
 		icon = "✔"
 		statusColor = color.New(color.FgGreen)
+	case types.StatusInfo:
+		icon = "ℹ"
+		statusColor = color.New(color.FgBlue)
 	case types.StatusWarning:
 		icon = "⚠"
 		statusColor = color.New(color.FgYellow)
@@ -289,11 +292,13 @@ func printSummary(summary *types.Summary) {
 	fmt.Println()
 
 	green := color.New(color.FgGreen)
+	blue := color.New(color.FgBlue)
 	yellow := color.New(color.FgYellow)
 	red := color.New(color.FgRed)
 
 	fmt.Printf("Total tests:     %d\n", summary.Total)
 	green.Printf("Healthy:         %d\n", summary.Healthy)
+	blue.Printf("Info:            %d\n", summary.Info)
 	yellow.Printf("Warning:         %d\n", summary.Warning)
 	red.Printf("Critical:        %d\n", summary.Critical)
 
@@ -303,6 +308,8 @@ func printSummary(summary *types.Summary) {
 		red.Println("⚠ Critical issues detected. Your environment may not function correctly.")
 	} else if summary.Warning > 0 {
 		yellow.Println("⚠ Some warnings detected. Consider addressing them to avoid future issues.")
+	} else if summary.Info > 0 {
+		blue.Println("ℹ Some informational items detected. Review them when convenient.")
 	} else {
 		green.Println("✓ All systems healthy! Your development environment is in good shape.")
 	}

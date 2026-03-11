@@ -7,6 +7,7 @@ type Status string
 
 const (
 	StatusHealthy  Status = "healthy"
+	StatusInfo     Status = "info"
 	StatusWarning  Status = "warning"
 	StatusCritical Status = "critical"
 )
@@ -71,6 +72,7 @@ type DiagnosticConfig struct {
 type Summary struct {
 	Total     int
 	Healthy   int
+	Info      int
 	Warning   int
 	Critical  int
 	Results   []DiagnosticResult

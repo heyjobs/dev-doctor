@@ -118,7 +118,7 @@ func severityToStatus(severity types.Severity) types.Status {
 	case types.SeverityWarning:
 		return types.StatusWarning
 	case types.SeverityInfo:
-		return types.StatusWarning
+		return types.StatusInfo
 	default:
 		return types.StatusWarning
 	}
@@ -178,6 +178,8 @@ func (r *Runner) buildSummary(results []types.DiagnosticResult) *types.Summary {
 		switch result.Status {
 		case types.StatusHealthy:
 			summary.Healthy++
+		case types.StatusInfo:
+			summary.Info++
 		case types.StatusWarning:
 			summary.Warning++
 		case types.StatusCritical:
