@@ -1,0 +1,164 @@
+package runner
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/yourusername/dev-doctor/internal/cures"
+	"github.com/yourusername/dev-doctor/internal/diagnostics"
+	"github.com/yourusername/dev-doctor/internal/types"
+)
+
+// Runner orchestrates the execution of diagnostic tests and treatments
+type Runner struct {
+	diagnosticRegistry *diagnostics.Registry
+	cureRegistry       *cures.Registry
+	config             *types.DiagnosticConfig
+	diagnosticTimeout  time.Duration
+	cureTimeout        time.Duration
+}
+
+// NewRunner creates a new diagnostic runner
+func NewRunner(config *types.DiagnosticConfig) *Runner {
+	return &Runner{
+		diagnosticRegistry: diagnostics.DefaultRegistry(),
+		cureRegistry:       cures.DefaultRegistry(),
+		config:             config,
+		diagnosticTimeout:  30 * time.Second, // Default timeout per diagnostic
+		cureTimeout:        10 * time.Minute, // Default timeout per cure (longer for installations)
+	}
+}
+
+// ResultCallback is called after each diagnostic test completes
+type ResultCallback func(result types.DiagnosticResult)
+
+// RunDiagnostics executes all diagnostic tests and returns results
+func (r *Runner) RunDiagnostics(ctx context.Context) (*types.Summary, error) {
+	return r.RunDiagnosticsWithCallback(ctx, nil)
+}
+
+// RunDiagnosticsWithCallback executes all diagnostic tests and calls the callback after each one
+func (r *Runner) RunDiagnosticsWithCallback(ctx context.Context, callback ResultCallback) (*types.Summary, error) {
+	results := make([]types.DiagnosticResult, 0, len(r.config.Tests))
+
+	for _, test := range r.config.Tests {
+		result, err := r.runSingleDiagnostic(ctx, test)
+		if err != nil {
+			// Log error but continue with other tests
+			result = types.DiagnosticResult{
+				TestID:      test.Test,
+				Description: test.Description,
+				Status:      types.StatusCritical,
+				Summary:     fmt.Sprintf("Test execution failed: %v", err),
+				Symptom:     test.Symptom,
+				CureID:      test.Cure,
+				FixAvailable: false,
+				Severity:    test.Severity,
+			}
+		}
+		results = append(results, result)
+
+		// Call callback immediately after each test completes
+		if callback != nil {
+			callback(result)
+		}
+	}
+
+	return r.buildSummary(results), nil
+}
+
+// runSingleDiagnostic executes a single diagnostic test
+func (r *Runner) runSingleDiagnostic(ctx context.Context, test types.DiagnosticTest) (types.DiagnosticResult, error) {
+	// Get the diagnostic function
+	diagFunc, err := r.diagnosticRegistry.Get(test.Diagnostic)
+	if err != nil {
+		return types.DiagnosticResult{}, fmt.Errorf("diagnostic not found: %s", test.Diagnostic)
+	}
+
+	// Create context with timeout
+	testCtx, cancel := context.WithTimeout(ctx, r.diagnosticTimeout)
+	defer cancel()
+
+	// Execute the diagnostic
+	status, summary, err := diagFunc(testCtx)
+	if err != nil {
+		return types.DiagnosticResult{}, err
+	}
+
+	// Check if cure is available
+	fixAvailable := false
+	if test.Cure != "" {
+		_, err := r.cureRegistry.Get(test.Cure)
+		fixAvailable = (err == nil)
+	}
+
+	return types.DiagnosticResult{
+		TestID:       test.Test,
+		Description:  test.Description,
+		Status:       status,
+		Summary:      summary,
+		Symptom:      test.Symptom,
+		CureID:       test.Cure,
+		FixAvailable: fixAvailable,
+		Severity:     test.Severity,
+	}, nil
+}
+
+// ApplyTreatments applies cures to failed diagnostics
+func (r *Runner) ApplyTreatments(ctx context.Context, results []types.DiagnosticResult) error {
+	for _, result := range results {
+		// Only apply treatments to non-healthy tests with available fixes
+		if result.Status == types.StatusHealthy || !result.FixAvailable {
+			continue
+		}
+
+		// Get the cure function
+		cureFunc, err := r.cureRegistry.Get(result.CureID)
+		if err != nil {
+			return fmt.Errorf("cure not found for %s: %w", result.TestID, err)
+		}
+
+		// Create context with timeout (longer for cures like Python installation)
+		cureCtx, cancel := context.WithTimeout(ctx, r.cureTimeout)
+		defer cancel()
+
+		// Apply the cure
+		if err := cureFunc(cureCtx); err != nil {
+			return fmt.Errorf("failed to apply cure for %s: %w", result.TestID, err)
+		}
+	}
+
+	return nil
+}
+
+// buildSummary aggregates results into a summary
+func (r *Runner) buildSummary(results []types.DiagnosticResult) *types.Summary {
+	summary := &types.Summary{
+		Total:   len(results),
+		Results: results,
+	}
+
+	for _, result := range results {
+		switch result.Status {
+		case types.StatusHealthy:
+			summary.Healthy++
+		case types.StatusWarning:
+			summary.Warning++
+		case types.StatusCritical:
+			summary.Critical++
+		}
+	}
+
+	return summary
+}
+
+// SetDiagnosticTimeout configures the timeout for diagnostic tests
+func (r *Runner) SetDiagnosticTimeout(timeout time.Duration) {
+	r.diagnosticTimeout = timeout
+}
+
+// SetCureTimeout configures the timeout for cure operations
+func (r *Runner) SetCureTimeout(timeout time.Duration) {
+	r.cureTimeout = timeout
+}

@@ -1,0 +1,74 @@
+tests:
+  - test: check_vpn_connection
+    description: Verify connected to VPN
+    diagnostic: vpn_connection
+    cure: connect_to_vpn
+    severity: warning
+    symptom: Cannot access internal resources without VPN
+    profiles:
+      - basic
+
+  - test: check_aws_vault
+    description: Verify aws-vault is installed
+    diagnostic: aws_vault
+    cure: install_aws_vault
+    severity: warning
+    symptom: Cannot securely manage AWS credentials
+    profiles:
+      - basic
+
+  - test: check_aws_sso_setup
+    description: Verify AWS SSO profiles are configured
+    diagnostic: aws_sso_setup
+    cure: setup_aws_sso
+    severity: warning
+    symptom: AWS SSO authentication fails or profiles are missing
+    profiles:
+      - basic
+
+
+  - test: check_git_configuration
+    description: Verify Git user configuration is set
+    diagnostic: git_config
+    cure: configure_git
+    severity: info
+    symptom: Git commits require manual user configuration
+    profiles:
+      - basic
+
+  - test: check_brewfile
+    description: Verify infrastructure tools from Brewfile are installed
+    diagnostic: brewfile
+    cure: install_brewfile
+    severity: warning
+    symptom: Infrastructure tools are missing
+    profiles:
+      - infrastructure
+
+  - test: check_opentofu_version
+    description: Verify OpenTofu version meets requirements
+    diagnostic: opentofu_version
+    cure: update_opentofu
+    severity: warning
+    symptom: OpenTofu commands fail or produce unexpected results
+    profiles:
+      - infrastructure
+
+  - test: check_python_version
+    description: Verify Python version is 3.10.x
+    diagnostic: python_version
+    cure: update_python
+    severity: warning
+    symptom: Python scripts may fail or use incompatible features
+    profiles:
+      - data
+
+  - test: check_wasp_version
+    description: Verify Wasp is installed
+    diagnostic: wasp_version
+    cure: install_wasp
+    severity: warning
+    symptom: Cannot run Wasp projects
+    profiles:
+      - data
+
