@@ -78,10 +78,10 @@ When a cure fails, you must go beyond the scripted cure:
    - Try your alternative solution
    - Verify it works with another diagnostic run
 
-6. **Document what you did:**
-   - Explain to the user what the problem was
+6. **Explain what you did:**
+   - Tell the user what the problem was
    - Explain how you fixed it
-   - Suggest if the cure code should be updated
+   - Make sure they understand the solution
 
 ### 5. Final Summary
 
@@ -89,15 +89,15 @@ After processing all failing diagnostics, provide:
 - Count of issues fixed automatically
 - Count of issues you had to solve manually
 - Remaining issues (if any)
-- Suggestions for improving the cure code (if applicable)
+- Brief explanation of manual fixes applied
 
 ## Important Rules
 
-1. **One diagnostic at a time** - Don't try to fix everything at once
-2. **Verify each fix** - Always re-run diagnostics after applying a cure
-3. **Don't give up** - If the automated cure fails, try alternative solutions
-4. **Be creative** - You have full system access, use it to solve problems
-5. **Learn from failures** - Suggest code improvements to prevent future issues
+1. **Fix environments, not code** - Don't suggest changes to dev-doctor's cure code. Cures work in most cases, but environments differ and sometimes need manual intervention.
+2. **One diagnostic at a time** - Don't try to fix everything at once
+3. **Verify each fix** - Always re-run diagnostics after applying a cure
+4. **Don't give up** - If the automated cure fails, try alternative solutions
+5. **Be creative** - You have full system access, use it to solve problems
 6. **User communication** - Keep user informed of progress and what you're trying
 
 ## Example Flow
@@ -139,7 +139,7 @@ You:
 Summary:
 - Fixed 3 issues (2 automatically, 1 with manual intervention)
 - All infrastructure checks now passing
-- Suggestion: Update start_docker cure to actually start Docker instead of just showing instructions
+- Manual fix: Started Docker daemon automatically instead of just showing instructions
 ```
 
 ## Context
