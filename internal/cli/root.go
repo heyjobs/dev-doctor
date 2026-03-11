@@ -38,7 +38,7 @@ misconfigured services, and more.`,
 	cmd.Flags().StringVarP(&configPath, "config", "c", "", "Path to diagnostics configuration file")
 	cmd.Flags().BoolVarP(&quietMode, "quiet", "q", false, "Suppress progress messages")
 	cmd.Flags().StringVarP(&modeFlag, "mode", "m", "", "Mode: 'diagnosis' (check only) or 'treatment' (check and fix)")
-	cmd.Flags().StringVarP(&profileFlag, "profile", "p", "", "Profile to run: 'basic', 'infrastructure', or 'data' (skips interactive prompt)")
+	cmd.Flags().StringVarP(&profileFlag, "profile", "p", "", "Profile to run: 'basic', 'infrastructure', 'data', or 'dbt_analytics' (skips interactive prompt)")
 
 	return cmd
 }
@@ -63,7 +63,7 @@ func runDiagnostics(cmd *cobra.Command, args []string) error {
 	var profile string
 	if profileFlag != "" {
 		// Validate profile from flag
-		validProfiles := []string{"basic", "infrastructure", "data"}
+		validProfiles := []string{"basic", "infrastructure", "data", "dbt_analytics"}
 		valid := false
 		for _, vp := range validProfiles {
 			if profileFlag == vp {
@@ -72,7 +72,7 @@ func runDiagnostics(cmd *cobra.Command, args []string) error {
 			}
 		}
 		if !valid {
-			return fmt.Errorf("invalid profile: %s (must be 'basic', 'infrastructure', or 'data')", profileFlag)
+			return fmt.Errorf("invalid profile: %s (must be 'basic', 'infrastructure', 'data', or 'dbt_analytics')", profileFlag)
 		}
 		profile = profileFlag
 	} else {
@@ -197,6 +197,7 @@ func promptProfile() (string, error) {
 					huh.NewOption("Basic - core developer tools only", "basic"),
 					huh.NewOption("Infrastructure - basic + platform tools (Docker, OpenTofu)", "infrastructure"),
 					huh.NewOption("Data - basic + data engineering tools (Python)", "data"),
+				    huh.NewOption("dbt Analytics - bi_analytics_dbt project setup", "dbt_analytics"),
 				).
 				Value(&profile),
 		),
