@@ -1,4 +1,22 @@
 tests:
+  - test: check_homebrew_installed
+    description: Verify Homebrew is installed
+    diagnostic: homebrew_installed
+    cure: install_homebrew
+    severity: critical
+    symptom: Cannot install packages via Homebrew
+    profiles:
+      - basic
+
+  - test: check_homebrew_updated
+    description: Verify Homebrew is up to date
+    diagnostic: homebrew_updated
+    cure: update_homebrew
+    severity: warning
+    symptom: Homebrew formulae may be outdated
+    profiles:
+      - basic
+
   - test: check_vpn_connection
     description: Verify connected to VPN
     diagnostic: vpn_connection
